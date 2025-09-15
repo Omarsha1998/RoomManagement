@@ -1,0 +1,647 @@
+// app global css in SCSS form
+.bgImageUERM {
+  background-image: url("../assets/images/uerm-background.jpg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  height: 100vh;
+}
+
+.bgImageLogo {
+  background-image: url("../assets/images/LOGOWITHBG.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.custom-expansion-item:open {
+  background-color: transparent !important;
+  color: #000000 !important;
+}
+
+.custom-expansion-item {
+  color: #000000 !important;
+}
+
+.sticky-thead {
+  position: sticky;
+  top: 0;
+  background-color: #eeeeee;
+  z-index: 1;
+}
+
+.insideCard {
+  padding-bottom: 10px;
+}
+
+.virtual-scroll {
+  overflow: auto;
+}
+
+.virtual-scroll:hover {
+  overflow: auto;
+}
+
+.virtual-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+
+.virtual-scroll::-webkit-scrollbar-thumb {
+  background-color: $primary;
+  border-radius: 6px;
+}
+
+.virtual-scroll::-webkit-scrollbar-track {
+  background-color: $blue-2;
+  border-radius: 6px;
+}
+
+.custom-loading-style {
+  font-weight: bold;
+  font-size: 23px;
+}
+
+.disable-pointer-events {
+  pointer-events: none;
+}
+
+.hoverable-item:hover {
+  background-color: $blue-10;
+  transition: 1s ease;
+}
+
+.custom-title-class {
+  background-color: $primary;
+}
+
+.text-size-sm {
+  font-size: 16px;
+}
+
+.text-size-md {
+  font-size: 18px;
+}
+
+.text-size-lg {
+  font-size: 20px;
+}
+
+.text-size-default {
+  font-size: 18px;
+}
+
+.bold-text {
+  font-weight: bold;
+}
+
+.xs-text {
+  font-size: 16px;
+}
+
+.sm-text {
+  font-size: 18px;
+}
+
+.md-text,
+.lg-text {
+  font-size: 20px;
+}
+
+.xl-text {
+  font-size: 25px;
+}
+
+.sm-width {
+  width: 350px;
+}
+
+.md-width {
+  width: 450px;
+}
+
+.lg-width {
+  width: 500px;
+}
+
+.xl-width {
+  width: 550px;
+}
+
+.sm-min-height {
+  min-height: 100px;
+}
+
+.md-min-height {
+  min-height: 100px;
+}
+
+.lg-min-height {
+  min-height: 100px;
+}
+
+.xl-min-height {
+  min-height: 100px;
+}
+
+.text2 {
+  font-size: 15px;
+}
+
+.no-dropdown .q-btn-dropdown__arrow {
+  display: none;
+}
+
+.q-date-container {
+  position: relative;
+}
+
+.q-menu .q-item:hover {
+  background-color: $blue-10;
+  transition: background-color 2s ease;
+  border-radius: 10px;
+}
+
+.q-menu {
+  height: auto !important;
+  max-height: 300px !important;
+  overflow-y: auto !important;
+}
+
+.q-menu:hover {
+  overflow: auto;
+}
+
+.q-menu::-webkit-scrollbar {
+  width: 10px;
+}
+
+.q-menu::-webkit-scrollbar-thumb {
+  background-color: $primary;
+  border-radius: 6px;
+}
+
+.q-menu::-webkit-scrollbar-track {
+  background-color: $blue-2;
+
+  border-radius: 6px;
+}
+
+.q-dialog__title {
+  font-weight: bold;
+  background-color: $primary;
+  color: white;
+  margin-bottom: 10px;
+}
+
+.q-dialog__message {
+  font-weight: bold;
+}
+
+.q-stepper .q-step__title {
+  background-color: black !important;
+  color: white;
+}
+
+.rounded {
+  border-radius: 10px;
+  margin-top: 20px;
+}
+
+.rounded2 {
+  border-radius: 10px;
+  margin-top: 20px;
+  height: auto;
+}
+
+.activeLink {
+  background-color: $amber-8;
+}
+
+.buttonGroup {
+  outline: 1px solid $blue-10;
+}
+
+.buttonGroup:hover {
+  background-color: $amber-8;
+  transition: background-color 3s ease;
+  border-radius: 10px;
+}
+
+.q-btn:hover {
+  transition: 500ms ease;
+  border-radius: 15px;
+}
+
+.custom-stepper-header {
+  background-color: $blue-10;
+}
+
+.q-date__header {
+  background-color: $amber-8 !important;
+}
+
+.q-date__calendar {
+  background-color: white !important;
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.day-header,
+.day {
+  text-align: center;
+  border: 1px solid #ccc;
+  padding: 10px;
+}
+
+.today {
+  background-color: $blue-10;
+}
+
+.selected {
+  background-color: $blue-5;
+  color: white;
+}
+
+.event {
+  background-color: $blue-10;
+  border-radius: 3px;
+  margin-top: 2px;
+  font-size: 15px;
+  color: white;
+}
+
+.day.event {
+  background-color: $amber-8;
+}
+
+.sm-width2 {
+  min-width: 450px;
+}
+
+.md-width2 {
+  min-width: 550px;
+}
+
+.lg-width2 {
+  min-width: 650px;
+}
+.xl-width2 {
+  min-width: 750px;
+}
+
+.sm-widthLogin {
+  min-width: 320px;
+}
+
+.md-widthLogin {
+  min-width: 350px;
+}
+
+.lg-widthLogin {
+  min-width: 380px;
+}
+.xl-widthLogin {
+  min-width: 400px;
+}
+
+
+.sm-min-height2 {
+  min-height: 200px;
+}
+
+.md-min-height2 {
+  min-height: 250px;
+}
+
+.lg-min-height2 {
+  min-height: 300px;
+}
+
+.xl-min-height2 {
+  min-height: 350px;
+}
+
+.d-flex {
+  display: flex;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.align-center {
+  align-items: center;
+}
+
+// .white-shadow {
+//   box-shadow: 0 0 15px rgba(255, 255, 255, 1);
+// }
+.black-shadow {
+  box-shadow: 0 0 10px rgba(0, 0, 0, 1);
+}
+
+.search-text .q-field__native {
+  color: $blue-10;
+}
+
+
+.logoClass {
+  background-color: $blue-10;
+  border-radius: 20px;
+  height: 90%;
+  width: 90%;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 1);
+}
+
+.sm-widthSched {
+  min-width: 500px;
+}
+
+.md-widthSched {
+  min-width: 800px;
+}
+
+.lg-widthSched {
+  min-width: 1100px;
+}
+
+.xl-widthSched {
+  min-width: 1400px;
+}
+
+.sm-heightSched {
+  min-height: 200px;
+}
+
+.md-heightSched {
+  min-height: 400px;
+}
+
+.lg-heightSched {
+  min-height: 600px;
+}
+
+.xl-heightSched {
+  min-height: 800px;
+}
+
+//LOADER
+// .loader-container {
+//   position: fixed;
+//   top: 0;
+//   left: 0;
+//   right: 0;
+//   bottom: 0;
+//   display: flex;
+//   justify-content: center;
+//   align-items: center;
+//   background: rgba(255, 255, 255, 0.8);
+//   z-index: 9999;
+// }
+
+// .loader {
+//   width: fit-content;
+//   font-weight: bold;
+//   font-family: monospace;
+//   font-size: 40px;
+//   animation: l21 2s infinite;
+// }
+
+// .loader::before {
+//   content: "Loading...";
+//   color: transparent; /* Text color is transparent */
+//   padding: 0 15px;
+//   background: linear-gradient(
+//     90deg,
+//     $blue-10,
+//     $yellow-8
+//   ); /* Gradient from blue to yellow */
+//   background-size: 200% auto; /* Make the background bigger than the text */
+//   -webkit-background-clip: text; /* Clip the background to the text */
+//   background-clip: text;
+//   background-position: 200% center; /* Start position */
+//   animation: moveGradient 3s linear infinite; /* Animation for background movement */
+// }
+
+// @keyframes moveGradient {
+//   0% {
+//     background-position: 200% center;
+//   }
+//   100% {
+//     background-position: -200% center;
+//   }
+// }
+
+.loader-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  z-index: 9999;
+}
+
+.loader {
+  font-weight: bold;
+  font-family: monospace;
+  font-size: 35px;
+  background: linear-gradient(
+    90deg,
+    $blue-10,
+    $amber-8
+  ); /* Gradient from blue to yellow */
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-size: 200% auto;
+  animation: moveGradient 3s linear infinite;
+}
+
+.move-gradient {
+  // background: linear-gradient(90deg, $amber-3, $blue-10);
+  animation: moveGradient 3s linear infinite;
+  color: transparent;
+  background-size: 200% auto;
+  border-radius: 25px;
+}
+
+@keyframes moveGradient {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+//LOADER
+
+.event-item {
+  border-radius: 5px;
+  margin-top: 7.5px;
+  margin-bottom: 7.5px;
+
+  word-wrap: break-word;
+}
+
+.calendarMonth{
+  box-shadow: 0 0 10px $grey-5;
+
+}
+
+// WEEKLY CSS CALENDAR
+// .my-event {
+//   position: relative;
+//   display: inline-flex;
+//   white-space: nowrap;
+//   font-size: 12px;
+//   height: 20px;
+//   margin: 1px 0 0 0;
+//   padding: 2px 2px;
+//   justify-content: start;
+//   text-overflow: ellipsis;
+//   overflow: hidden;
+//   cursor: pointer;
+// }
+
+// .title {
+//   display: inline-block;
+//   white-space: nowrap;
+//   overflow: hidden;
+//   text-overflow: ellipsis;
+//   max-width: 100%;
+//   vertical-align: middle;
+//   text-align: left;
+// }
+
+// .my-void-event {
+//   display: inline-flex;
+//   white-space: nowrap;
+//   height: 1px;
+// }
+
+
+// .title {
+//   padding-left: 5px;
+//   padding-right: 5px;
+// }
+// WEEKLY CSS CALENDAR
+
+
+.my-event {
+  position: relative;
+  font-size: 12px;
+  width: calc(100% - 10px);
+  max-width: 100%;
+  margin: 2px auto;
+  padding: 2px;
+  justify-content: start;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: pointer;
+  border-radius: 6px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: start;
+  max-width: 100%;
+}
+
+.text-white {
+  color: white;
+}
+
+.bg-orange {
+  background: orange;
+}
+
+.bg-green {
+  background: green;
+}
+
+.bg-red {
+  background: red;
+}
+
+.bg-blue {
+  background: blue;
+}
+
+
+.hover-row {
+  transition: height 0.3s ease, background-color 0.3s ease;
+}
+
+.hover-row:hover {
+  height: 65px;
+  background-color: $blue-2;
+}
+
+
+.custom-dialog .q-dialog__title {
+  background-color: $blue-10;
+  color: white;
+  padding: 12px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+
+.inputClass {
+  box-shadow: 0 0 3px $blue-10;
+}
+
+.drawerStyle {
+  box-shadow: 0 0px 5px $grey-6;
+}
+
+.drawerBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  color: $blue-10;
+}
+
+.drawerScroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.drawerScroll::-webkit-scrollbar-thumb {
+  background-color: $primary;
+  border-radius: 6px;
+}
+
+.drawerScroll::-webkit-scrollbar-track {
+  background-color: $blue-2;
+  border-radius: 6px;
+}
+
+
+// .login-card {
+//   width: 400px;
+//   height: 450px;
+//   border-radius: 15px;
+//   box-shadow: 0 0px 8px black;
+// }
+

@@ -1,0 +1,15 @@
+export default {
+  getRoomOptions: (state) => state.roomOptions,
+  getBuildingOptions: (state) => state.buildingOptions,
+  getDepartmentOptions: (state) => state.departmentOptions,
+  getSubjectCode: (state) => state.subjectCodeOptions,
+  getAvailableRooms: (state) => state.availableRooms,
+  getBookedSchedule: (state) => state.bookedRooms,
+  getEmployeeBookedSchedule: (state) => state.employeeBookedRooms,
+  getSections: (state) => state.sections,
+  getSemester: (state) => state.semester,
+  getBulkData: (state) => state.bulkData,
+  getScheduledRoomView: (state) => state.scheduledRoomView,
+  getAllRoomsReport: (state) => state.allRoomsReport,
+  getRooms: (state) => state.rooms,
+};

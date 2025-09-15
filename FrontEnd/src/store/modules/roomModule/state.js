@@ -1,0 +1,15 @@
+export default {
+  roomOptions: [],
+  buildingOptions: [],
+  departmentOptions: [],
+  subjectCodeOptions: [],
+  availableRooms: [],
+  bookedRooms: [],
+  sections: [],
+  semester: [],
+  employeeBookedRooms: [],
+  bulkData: JSON.parse(localStorage.getItem("bulkData")) || [],
+  scheduledRoomView: [],
+  allRoomsReport: [],
+  rooms: [],
+};

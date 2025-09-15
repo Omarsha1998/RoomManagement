@@ -1,0 +1,9 @@
+.qr-code-template {
+  width: 50px;
+  position: absolute;
+  right: 0.2cm;
+  top: 2.5cm;
+}
+#header{
+  padding:10px;
+}

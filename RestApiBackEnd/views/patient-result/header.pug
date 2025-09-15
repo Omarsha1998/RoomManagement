@@ -1,0 +1,54 @@
+div(class="mb-3 d-flex border-bottom border-dark py-2 justify-content-between align-items-center")
+  div(style="width:60px")
+    //- img(src=content.header.logoUerm, width="100%")
+    img(src='/images/uerm.png', width="100%")
+  div(class="mx-2 text-center header flex-grow-1")
+    div
+      b UNIVERSITY OF THE EAST RAMON MAGSAYSAY MEMORIAL MEDICAL CENTER, INC.
+    div 64 AURORA BLVD., BRGY. DOÑA IMELDA, QUEZON CITY, PHILIPPINES, 1113
+    div +632-8715-0861 to 77 • www.uermhospital.com.ph
+  div(style="width:60px")
+    //- img(src=content.header.logoHosp style="width:100%")
+    img(src="/images/hospital.png" style="width:100%")
+div(class="mb-5 border-bottom patient-info-details border-dark patient-info", style="height:70px;padding:12px 0 !important")
+  div(class="row")
+    div(class="col col-11")
+      div(class="row")
+        div(class="col col-6") NAME: 
+          if content.patient.details.patientName
+            b=`${content.patient.details.patientName}`
+          else
+            b=`${content.patient.details.lastName} ${content.patient.details.firstName} ${content.patient.details.middleName}`
+        div(class="col col-6") REQUESTING PHYSICIAN: 
+          b=content.patient.details.requestingPhysician
+      div(class="row")
+        div(class="col col-6") EXAMINATION: 
+          b=content.patient.details.description
+        div(class="col col-3") PATIENT NO.: 
+          b=content.patient.details.patientNo
+        div(class="col col-3") CASE NO.: 
+          b=content.patient.details.caseno
+      div(class="row")
+        div(class="col col-2") AGE: 
+          b=content.patient.details.age
+        div(class="col col-2") GENDER: 
+          b=content.patient.details.gender
+        div(class="col col-2")
+        div(class="col col-3") ROOM: 
+          b=content.patient.details.room
+        div(class="col col-3") CHARGE SLIP NO.: 
+          b=content.patient.details.chargeSlipNo
+      div(class="row")
+        div(class="col col-6") DATE/TIME OF PROCEDURE: 
+          b=`${content.patient.details.chargeDate} ${content.patient.details.chargeTime}`
+        div(class="col col-3") DATE OF RESULT: 
+          b=content.patient.details.resultDate
+        if content.patient.details.revCode == 'XR'
+          div(class="col col-3") FILE NO.: 
+            b=content.patient.details.controlNo
+        else
+          div(class="col col-3")
+    div(class="col col-1")
+div(class="text-center")
+  if(content.patient.details.revDescription != "- TEMPLATE -")
+    b=content.patient.details.revCode == 'WEL' ? 'EXAMINATION' : `${content.patient.details.revDescription} REPORT`
