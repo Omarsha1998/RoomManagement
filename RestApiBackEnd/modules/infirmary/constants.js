@@ -1,0 +1,8 @@
+const VISIT_ORDER_ACTIONS = {
+  ACKNOWLEDGE: "ACKNOWLEDGE",
+  RESET: "RESET",
+};
+
+module.exports = {
+  VISIT_ORDER_ACTIONS,
+};

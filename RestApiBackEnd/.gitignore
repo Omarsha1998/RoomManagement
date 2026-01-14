@@ -1,0 +1,13 @@
+/node_modules
+/keys
+/scholarship-bills
+/modules/employee-central/uploaded
+/modules/orbit/orbitDebugKeys
+/modules/orbit/FAQ
+*.pdf
+*.logs
+*.log
+
+.env
+.env.*
+!.env.example

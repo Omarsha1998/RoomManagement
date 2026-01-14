@@ -1,0 +1,38 @@
+html
+  head
+    title= "Patient Result: "+content.id.encrypted
+    link(rel="stylesheet", href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900")
+    link(rel="stylesheet", href="https://apps.uerm.edu.ph/vue_assets/html-assets/fontawesome.min.css")
+    link(rel="stylesheet", href="https://apps.uerm.edu.ph/vue_assets/html-assets/vuetify.min.css")
+    style
+      //- include fonts.css
+      //- include fontawesome.css
+      //- include vuetify.css
+      include style.css
+  body(class="v-application")
+    div(style="margin-left:auto;margin-right:auto;")
+      div(class="paper", style="height:11.2in")
+        img(src=content.qrCode, class="qr-code d-none d-print-block")
+        div
+          if content.patient.previewData
+            div(class="preview") PREVIEW
+        div(class="d-none d-print-flex fill-height align-center justify-center", style="position:absolute;top:0;left:0;right:0;bottom:0;")
+        div(class="fill-height d-flex flex-column")
+          div(class="p-footer")
+            include footer
+          div(class="p-header")
+            include header
+          table()
+            thead
+              tr
+                td
+                  div(class="header-space")
+            tbody
+              tr
+                td
+                  div 
+                    include body
+            tfoot
+              tr
+                td
+                  div(class="footer-space")

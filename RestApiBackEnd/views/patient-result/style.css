@@ -1,0 +1,113 @@
+@media print {
+  @page {
+    margin: 0cm;
+  }
+  body {
+    margin: 0cm;
+  }
+  .adjust-font-btn {
+    display: none !important;
+  }
+  .paper {
+    width: 100% !important;
+    height: 100vh !important;
+  }
+  .result{
+    margin-top: 1cm;
+  }
+  .header-space,
+  .p-header {
+    /* height: 6.7cm; */
+    height: 6.5cm;
+    overflow: hidden;
+  }
+  .footer-space,
+  .p-footer {
+    height: 4cm;
+    overflow: hidden;
+  }
+  .p-header {
+    position: fixed;
+    top: 0.5cm;
+    left: 1cm;
+    right: 1cm;
+  }
+  .p-footer {
+    position: fixed;
+    bottom: 0;
+    left: 1cm;
+    right: 1cm;
+  }
+  table {
+    width: 8in;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+}
+body {
+  font-size: 16px;
+}
+.paper {
+  width: 8.5in;
+  margin: auto;
+  font-size: 14px;
+  position: relative;
+}
+.row > * {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.border-bottom {
+  border-bottom: solid 1.5px #444;
+}
+.border-top {
+  border-top: solid 1.5px #444;
+}
+.header {
+  font-size: 14px;
+}
+.patient-info, .small-font {
+  font-size: 10.5px;
+}
+table {
+  border-collapse: collapse;
+}
+.result {
+  white-space: pre-wrap;
+  page-break-inside: auto;
+  font-size: 14px;
+  font-family: "Roboto";
+  line-height: 1.5;
+}
+.v-application .primary {
+  background-color: #1976d2 !important;
+  border-color: #1976d2 !important;
+}
+.v-application .error {
+  background-color: #ff5252 !important;
+  border-color: #ff5252 !important;
+}
+.preview {
+  font-size: 15rem;
+  position: absolute;
+  top: 317px;
+  bottom: 0;
+  left: 120px;
+  right: 0;
+  transform: rotate(-45deg);
+  opacity: 0.35;
+}
+.qr-code {
+  /* width: 50px;
+  position: fixed;
+  bottom: 1cm;
+  left: 1cm; */
+  width: 50px;
+  position: fixed;
+  right: 0.8cm;
+  top: 2.7cm;
+}
