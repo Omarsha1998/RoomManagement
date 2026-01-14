@@ -6,16 +6,9 @@ const {
   // jsDateToISOString,
   // sendEmail,
   objContains,
-  sliceObj,
 } = require("../../../../helpers/util.js");
 
-const { examPxCriteria } = require("../../constants.js");
-
-const {
-  USER_ROLES,
-  VISIT_ORDER_ACTIONS,
-  userRoleToExamsHandledMap,
-} = require("../../constants.js");
+const { VISIT_ORDER_ACTIONS } = require("../../constants.js");
 
 const patientModel = require("./patient.js");
 const miscModel = require("./misc.js");
@@ -44,13 +37,37 @@ const columns = [
 const columnNames = columns.map((c) => c.name);
 const columnNamesJoined = columnNames.join(",");
 
+// NOTE:
+// - `null` MEANS ALL PATIENTS MUST DO THE EXAM/PROCEDURE
+// - LOGICAL `OR` WILL BE USED FOR THE ARRAY ITEMS
+// - LOGICAL `AND` WILL BE USED FOR THE ITEM PROPS
+const examPxCriteria = {
+  MED_HIST: null,
+  PE: null,
+  DENTAL: [
+    {
+      campusCode: "CAL",
+    },
+  ],
+  LAB_CBC: null,
+  LAB_URI: null,
+  // ALLOW `LAB_FECA` FOR UE CALOOCAN EMPLOYEES
+  LAB_FCL: [
+    {
+      affiliationCode: "EMP",
+      campusCode: "CAL",
+    },
+  ],
+  RAD_XR_CHST: null,
+};
+
 const _pxAllowedForTheExam = (patient, examCode) => {
   if (examPxCriteria[examCode] === null) {
     return true;
   }
 
-  for (const cond of examPxCriteria[examCode]) {
-    if (objContains(patient, cond)) {
+  for (const c of examPxCriteria[examCode]) {
+    if (objContains(patient, c)) {
       return true;
     }
   }
@@ -109,7 +126,12 @@ const selectMany = async (limitTo, whereStr, whereArgs, txn) => {
         ve.AcceptedBy visitExamAcceptedBy,
         ve.DateTimeAccepted visitExamDateTimeAccepted,
         ve.CompletedBy visitExamCompletedBy,
-        ve.DateTimeCompleted visitExamDateTimeCompleted 
+        ve.DateTimeCompleted visitExamDateTimeCompleted
+        /* ,CASE WHEN ved.VisitExamId IS NULL THEN
+          0
+        ELSE
+          1
+        END hasVisitExamResult */
       FROM
         (
           SELECT ${sqlStrTop}
@@ -137,7 +159,13 @@ const selectMany = async (limitTo, whereStr, whereArgs, txn) => {
           ${whereStr}
           ${sqlStrTop ? "ORDER BY v.Id DESC" : ""}
         ) tb
-        LEFT JOIN AnnualPhysicalExam..VisitExams ve ON ve.VisitId = tb.Id;
+        LEFT JOIN AnnualPhysicalExam..VisitExams ve ON ve.VisitId = tb.Id
+        /* LEFT JOIN (
+          SELECT MIN(VisitExamId) VisitExamId
+          FROM AnnualPhysicalExam..VisitExamDetails
+          GROUP BY VisitExamId
+        ) ved ON ved.VisitExamId = ve.Id */
+        ;
     `,
     whereArgs,
     txn,
@@ -196,9 +224,7 @@ const insertOne = async (user, patient, txn) => {
       code: visitCode,
       patientId: patient.id,
       createdBy: user.code,
-      ...(user.roleCode === USER_ROLES.DR.code
-        ? { physicianCode: user.code }
-        : {}),
+      ...(user.roleCode === "DR" ? { physicianCode: user.code } : {}),
     },
     txn,
   );
@@ -492,10 +518,7 @@ const _getAdditionalVisitExamDetails = (appConfig, row) => {
 
   if (row.examCode === "RAD_XR_CHST") {
     return {
-      RDLGST:
-        row.completedByRoleCode === USER_ROLES.RAD.code
-          ? `${row.completedBy} MD`
-          : "",
+      RDLGST: row.completedByRoleCode === "RAD" ? `${row.completedBy} MD` : "",
     };
   }
 
@@ -568,12 +591,17 @@ const selectAllDetails = async (
         ved.ExamParamUnit unit,
         ved.ExamParamValue value,
         ved.ExamParamNormalRange normalRange,
-        ${db.fullName("u.FirstName", "u.MiddleName", "u.LastName", "u.ExtName")} completedBy,
+        CASE WHEN ve.AcceptedBy IS NULL THEN
+          NULL
+        ELSE
+          ${db.fullName("u.FirstName", "u.MiddleName", "u.LastName", "u.ExtName")}
+        END completedBy,
         u.RoleCode completedByRoleCode
       FROM
         AnnualPhysicalExam..VisitExamDetails ved
         LEFT JOIN AnnualPhysicalExam..VisitExams ve ON ve.Id = ved.VisitExamId
-        LEFT JOIN AnnualPhysicalExam..Users u ON u.Code = ve.CompletedBy
+        /* LEFT JOIN AnnualPhysicalExam..Users u ON u.Code = ve.CompletedBy */
+        LEFT JOIN AnnualPhysicalExam..Users u ON u.Code = ve.AcceptedBy
         LEFT JOIN AnnualPhysicalExam..Visits v ON v.Id = ve.VisitId
         LEFT JOIN AnnualPhysicalExam..Patients p ON p.Id = v.PatientId
       WHERE
@@ -592,12 +620,12 @@ const selectAllDetails = async (
       acc[e.visitId] = {};
     }
 
-    // acc[e.visitId][e.examCode] = {
-    //   visitId: e.visitId,
-    //   examCode: e.examCode,
-    //   completedBy: e.completedBy,
-    //   completedByRoleCode: e.completedByRoleCode,
-    // };
+    acc[e.visitId][e.examCode] = {
+      visitId: e.visitId,
+      examCode: e.examCode,
+      completedBy: e.completedBy,
+      completedByRoleCode: e.completedByRoleCode,
+    };
 
     acc[e.visitId][e.examCode] = _getAdditionalVisitExamDetails(appConfig, e);
     return acc;
@@ -626,7 +654,9 @@ const upsertVisitExam = async (
   const ret = [];
 
   for (const detail of visitExamDetails) {
-    if (!detail) continue;
+    if (!detail || !detail.code) {
+      continue;
+    }
 
     const rowIdentity = {
       visitExamId,
@@ -634,10 +664,10 @@ const upsertVisitExam = async (
     };
 
     const row = {
-      examParamValue: detail.value,
-      examParamUnit: detail.unit,
-      examParamNormalRange: detail.normalRange,
-      examParamValueFlag: detail.flag,
+      examParamValue: detail.value ?? null,
+      examParamUnit: detail.unit ?? null,
+      examParamNormalRange: detail.normalRange ?? null,
+      examParamValueFlag: detail.flag ?? null,
     };
 
     ret.push(
@@ -685,19 +715,21 @@ const assignPhysician = async (user, visit, txn) => {
     throw new Error("Incomplete arguments.");
   }
 
-  if (user.roleCode !== USER_ROLES.DR.code) {
+  if (user.roleCode !== "DR") {
     return;
   }
 
   await db.query(
     `
       UPDATE AnnualPhysicalExam..Visits SET
-        PhysicianCode = ?
+        PhysicianCode = ?,
+        UpdatedBy = ?,
+        DateTimeUpdated = GETDATE()
       WHERE
         Id = ?
         AND PhysicianCode IS NULL;
     `,
-    [user.code, visit.id],
+    [user.code, user.code, visit.id],
     txn,
     false,
   );
@@ -709,7 +741,7 @@ const validateVisitPhysician = (user, visit, txn) => {
   }
 
   if (
-    user.roleCode === USER_ROLES.DR.code &&
+    user.roleCode === "DR" &&
     visit.physicianCode &&
     visit.physicianCode !== user.code
   ) {
@@ -740,12 +772,43 @@ const upsertExamDetails = async (
     throw new Error("Incomplete arguments.");
   }
 
-  const author = creator || user;
+  const author = await (async () => {
+    if (!creator || !creator.code) {
+      return user;
+    }
 
-  if (!userRoleToExamsHandledMap[author.roleCode].includes(examCode)) {
+    const row = (
+      await db.query(
+        `
+          SELECT
+            code,
+            roleCode,
+            examsHandled
+          FROM
+            AnnualPhysicalExam..Users
+          WHERE
+            Code = ?;
+        `,
+        [creator.code],
+        txn,
+        false,
+      )
+    )[0];
+
+    return row ? { ...row, examsHandled: row.examsHandled.split(",") } : null;
+  })();
+
+  if (!author) {
     return {
       status: 403,
-      body: "You are not allowed to add/update this type of exam.",
+      body: `User ${author.code} not found.`,
+    };
+  }
+
+  if (!author.examsHandled.includes(examCode)) {
+    return {
+      status: 403,
+      body: `User ${author.code} is not allowed to add/update this type of exam.`,
     };
   }
 
@@ -776,18 +839,18 @@ const upsertExamDetails = async (
     };
   }
 
-  await assignPhysician(user, visit, txn);
-  const userValidationResult = validateVisitPhysician(user, visit, txn);
-
-  if (userValidationResult.status !== 200) {
-    return userValidationResult;
-  }
-
   if (visit.dateTimeCompleted) {
     return {
       status: 400,
       body: "Visit already completed.",
     };
+  }
+
+  await assignPhysician(author, visit, txn);
+  const userValidationResult = validateVisitPhysician(author, visit, txn);
+
+  if (userValidationResult.status !== 200) {
+    return userValidationResult;
   }
 
   const visitExam = await db.selectOne(
@@ -833,7 +896,7 @@ const upsertExamDetails = async (
 
   // AUTOMATICALLY TAG PATIENT AS ACCEPTED TO THE EXAM,
   // IF HE/SHE IS NOT YET ACCEPTED INTO THE EXAM
-  await acceptPxToExamIfNotYetAccepted(user.code, visit.id, examCode, txn);
+  await acceptPxToExamIfNotYetAccepted(author.code, visit.id, examCode, txn);
 
   const updatedVisit = await db.selectOne(
     "*",

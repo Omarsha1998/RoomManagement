@@ -7,7 +7,9 @@ const getRegisteredPatientCount = async (req, res) => {
     return;
   }
 
-  const whereStrArr = [];
+  const whereStrArr = [
+    "(p.WithdrawnOrResigned IS NULL OR p.WithdrawnOrResigned = 0)",
+  ];
   const whereArgs = [];
 
   const columnsSub = ["COUNT(Id) patientCount"];
@@ -127,6 +129,7 @@ const getDoctorPatientCount = async (req, res) => {
           LEFT JOIN AnnualPhysicalExam..Users u ON u.Code = ved.CreatedBy
         WHERE
           u.RoleCode = 'DR'
+          AND (p.WithdrawnOrResigned IS NULL OR p.WithdrawnOrResigned = 0)
           AND p.[Year] = ?
           AND CONVERT(DATE, ved.DateTimeCreated) BETWEEN ? AND ?
         GROUP BY
@@ -194,15 +197,21 @@ const getSeenPatientCount = async (req, res) => {
               u.RoleCode = 'DR'
           ) v ON v.PatientId = p.Id
         WHERE
-          p.[Year] = ?
+          (p.WithdrawnOrResigned IS NULL OR p.WithdrawnOrResigned = 0)
+          AND p.[Year] = ?
           ${req.query.campusCode ? " AND ".concat("p.CampusCode = ?") : ""}
+          ${req.query.affiliationCode ? " AND ".concat("p.AffiliationCode = ?") : ""}
       ) tb
       GROUP BY
         DeptName
       ORDER BY
         DeptName;
     `,
-    [req.query.year, ...(req.query.campusCode ? [req.query.campusCode] : [])],
+    [
+      req.query.year,
+      ...(req.query.campusCode ? [req.query.campusCode] : []),
+      ...(req.query.affiliationCode ? [req.query.affiliationCode] : []),
+    ],
     null,
     false,
   );
@@ -238,6 +247,7 @@ const getDoctorXraysReadCount = async (req, res) => {
         WHERE
           ve.ExamCode = 'RAD_XR_CHST'
           AND u.RoleCode = 'RAD'
+          AND (p.WithdrawnOrResigned IS NULL OR p.WithdrawnOrResigned = 0)
           AND p.[Year] = ?
           ${req.query.campusCode ? " AND ".concat("p.CampusCode = ?") : ""}
       ) tb
@@ -319,6 +329,7 @@ const getPatientVisitProgress = async (req, res) => {
               LEFT JOIN AnnualPhysicalExam..VisitExams ve ON ve.VisitId = v.Id
               LEFT JOIN AnnualPhysicalExam..VisitExamDetails ved ON ved.VisitExamId = ve.Id
             ${whereStr}
+              AND (p.WithdrawnOrResigned IS NULL OR p.WithdrawnOrResigned = 0)
             GROUP BY
               p.Id,
               v.Id,
@@ -391,6 +402,7 @@ const getNotSeenPatients = async (req, res) => {
         ) ved ON ved.PatientId = p.Id
       WHERE
         ved.PatientId IS NULL
+        AND (p.WithdrawnOrResigned IS NULL OR p.WithdrawnOrResigned = 0)
         AND p.[Year] = ?
         AND p.CampusCode = ?
       ORDER BY

@@ -149,6 +149,7 @@ const getHiearchy = async () => {
     WHERE 
       (os.Code != 'N/A' or vd.CODE != 'N/A') 
       AND (COALESCE(os.Description, vd.DESCRIPTION) NOT LIKE 'INACTIVE%')
+      AND os.Deleted != 1
     `,
   );
   // return await sqlHelper.query(
@@ -275,7 +276,7 @@ const getDepartments = async () => {
 
 const checkDuplicate = async (department) => {
   return await sqlHelper.query(
-    ` SELECT 
+    `SELECT 
       os.Code, COALESCE(os.Description, d.DESCRIPTION) description, os.deleted, os.Parent, os.Level
     FROM [UE database]..OrganizationalStructure os
     LEFT JOIN UERMMMC..vw_Departments d ON os.Code = d.CODE
@@ -305,10 +306,68 @@ const insertNewHierarchy = async (item, txn, creationDateTimeField) => {
   );
 };
 
+const updateHierarchy = async (item, condition, txn, updateDateTimeField) => {
+  return await sqlHelper.update(
+    "[UE database]..OrganizationalStructure",
+    item,
+    condition,
+    txn,
+    updateDateTimeField,
+  );
+};
+
+const getChildrenByParent = async (deptCode, txn) => {
+  return await sqlHelper.query(
+    `SELECT
+      *
+    FROM
+      [UE database]..OrganizationalStructure
+    WHERE
+      Parent = ?
+    `,
+    [deptCode],
+    txn,
+  );
+};
+
+const updateChildrenLevels = async (
+  parentCode,
+  levelDifference,
+  updater,
+  txn,
+) => {
+  return await sqlHelper.query(
+    `WITH hierarchy_tree AS (
+      SELECT Code, Level, Parent
+      FROM [UE database]..OrganizationalStructure
+      WHERE Parent = @p0 AND Deleted = 0
+      
+      UNION ALL
+      
+      SELECT h.Code, h.Level, h.Parent
+      FROM [UE database]..OrganizationalStructure h
+      INNER JOIN hierarchy_tree ht ON h.Parent = ht.Code
+      WHERE h.Deleted = 0
+    )
+    UPDATE os
+    SET 
+      os.Level = os.Level + @p1,
+      os.UpdatedBy = @p2,
+      os.DateTimeUpdated = GETDATE()
+    FROM [UE database]..OrganizationalStructure os
+    INNER JOIN hierarchy_tree ht ON os.Code = ht.Code;`,
+    [parentCode, levelDifference, updater],
+    txn,
+  );
+};
+
 module.exports = {
   getHiearchy,
   getDepartments,
   checkDuplicate,
   setNewHierarchy,
   insertNewHierarchy,
+  updateHierarchy,
+  getChildrenByParent,
+  updateChildrenLevels,
 };

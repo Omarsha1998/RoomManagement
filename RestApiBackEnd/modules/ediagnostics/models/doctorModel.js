@@ -7,7 +7,8 @@ const selectDoctors = async function (conditions, args, options, txn) {
     const doctors = await sqlHelper.query(
       `SELECT
       ${util.empty(options.top) ? "" : `TOP(${options.top})`}
-      code, 
+      code id, 
+      ehr_code code,
       name,
       concat([LAST NAME], ', ', [FIRST NAME], ' ', [MIDDLE NAME], CASE 
         WHEN [EXT NAME] IS NOT NULL AND [EXT NAME] <> '' THEN ', ' + [EXT NAME] 
@@ -46,7 +47,10 @@ const selectDoctors = async function (conditions, args, options, txn) {
       [PHIC EXP DATE] phicExpirationDate,
       [LIC EXP DATE] licenseExpirationDate,
       ancillaryDepartment,
-      ancillaryDesignation
+      ancillaryDesignation,
+      ancillaryEmail,
+      ancillaryContactNumber,
+      ancillaryTests
     from UERMMMC..Doctors
     WHERE 1=1 ${conditions}
     ${util.empty(options.order) ? "" : `order by ${options.order}`}

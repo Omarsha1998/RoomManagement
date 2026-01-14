@@ -135,7 +135,7 @@ const _formatMedsJson = (value) => {
   return value;
 };
 
-const _prepareReqBody = async (payload) => {
+const prepareSaveClaimReqBody = async (payload, txn) => {
   // Get items that only occur in the left array,
   const toDeleteClaimDetails = payload?.oldData
     ? payload.oldData
@@ -164,11 +164,16 @@ const _prepareReqBody = async (payload) => {
       })
     : [];
 
-  const claim = await db.selectOne("*", "DocumentMgt..Cf4Claims", {
-    code: payload.claimId,
-  });
+  const claim = await db.selectOne(
+    "*",
+    "DocumentMgt..Cf4Claims",
+    { code: payload.claimId },
+    txn,
+  );
 
-  if (!claim || claim.error) return null;
+  if (!claim || claim.error) {
+    return null;
+  }
 
   delete payload.oldData;
   delete payload.fields;
@@ -322,7 +327,11 @@ const dumpClaim = async (req, res) => {
     return await cf4DbDumpModel.dumpClaim(req.query.caseNo, txn);
   });
 
-  if (result?.error) return res.status(500).json("Database Error.");
+  if (result?.error) {
+    res.status(500).json("Database Error.");
+    return;
+  }
+
   res.json(null);
 };
 
@@ -332,27 +341,26 @@ const saveClaim = async (req, res) => {
     return;
   }
 
-  const reqBody = await _prepareReqBody(req.body);
+  const response = await db.transact(async (txn) => {
+    const reqBody = await prepareSaveClaimReqBody(req.body, txn);
 
-  if (!reqBody) {
-    res.status(400).json({ error: "Claim cannot be found." });
-    return;
-  }
+    if (!reqBody) {
+      return {
+        status: 400,
+        body: { error: "Claim cannot be found." },
+      };
+    }
 
-  const {
-    userCode,
-    claimId,
-    caseNo,
-    patientNo,
-    claimDetails,
-    action,
-    remarks,
-  } = reqBody;
+    const {
+      userCode,
+      claimId,
+      caseNo,
+      patientNo,
+      claimDetails,
+      action,
+      remarks,
+    } = reqBody;
 
-  // console.log(reqBody);
-  // return res.json({ success: true });
-
-  const result = await db.transact(async (txn) => {
     let status = null;
     let claimCode = reqBody.claimCode ?? "";
 
@@ -454,18 +462,25 @@ const saveClaim = async (req, res) => {
       status = cf4Status.COMPLETED;
     }
 
-    if (status !== null) {
+    if (status && claimCode) {
       await appModel.insertClaimHistory(
         { status, userCode, claimCode, remarks },
         txn,
       );
     }
 
-    return { success: true };
+    return {
+      status: 200,
+      body: { success: true },
+    };
   });
 
-  if (result?.error) return res.status(500).json({ error: result.error });
-  res.json(result);
+  if (response?.error) {
+    res.status(500).json({ error: response.error });
+    return;
+  }
+
+  res.status(response.status).json(response.body);
 };
 
 const saveCf4Exception = async (req, res) => {

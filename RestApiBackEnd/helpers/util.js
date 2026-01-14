@@ -7,7 +7,7 @@ const atob = require("atob");
 const fs = require("fs/promises");
 const path = require("path");
 
-const mailjet = require("node-mailjet").connect(
+const mailjet = require("node-mailjet").apiConnect(
   process.env.MAIL_JET_PUBLIC_KEY,
   process.env.MAIL_JET_PRIVATE_KEY,
 );
@@ -164,6 +164,8 @@ const sendEmail = async (email) => {
     const result = await mailjet.post("send", { version: "v3.1" }).request({
       Messages: [
         {
+          CustomCampaign: "priority_notifications",
+          Priority: 2,
           From: {
             Email: email.senderEmail ?? "service-notification@uerm.edu.ph",
             Name: email.senderName ?? "UERM Service Notification",
@@ -181,6 +183,42 @@ const sendEmail = async (email) => {
             ehrHeader: `${email.header}`,
             ehrContent: `${email.content}`,
           },
+          Attachments: email.attachments || [],
+        },
+      ],
+    });
+
+    return result.body;
+  } catch (err) {
+    return err.statusCode;
+  }
+};
+
+const sendDynamicEmail = async (email) => {
+  if (process.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.log(`Sending email to ${email.email}...`);
+    return;
+  }
+
+  try {
+    const result = await mailjet.post("send", { version: "v3.1" }).request({
+      Messages: [
+        {
+          From: {
+            Email: email.senderEmail ?? "service-notification@uerm.edu.ph",
+            Name: email.senderName ?? "UERM Service Notification",
+          },
+          To: [
+            {
+              Email: `${email.address ?? email.email}`,
+              Name: `${email.name}`,
+            },
+          ],
+          TemplateID: email.templateId ?? 4088864,
+          TemplateLanguage: true,
+          Subject: `${email.subject}`,
+          Variables: email.variables, // {},
           Attachments: email.attachments || [],
         },
       ],
@@ -258,12 +296,15 @@ const generateNumber = function (length) {
     .slice(2, length + 2);
 };
 
-const generateAlphaNumericStr = function (length) {
-  // Base 36 is alpha-numeric
-  return Math.random()
-    .toString(36)
-    .slice(2, length + 2)
-    .toUpperCase();
+const generateAlphaNumericStr = (length) => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+
+  for (let i = 0; i < length; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return result;
 };
 
 const generateEntityCode = function (entityName) {
@@ -517,7 +558,16 @@ const formatDate2 = (dateDetails = null, delimeter = "-") => {
 
   const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(date);
   let month = new Intl.DateTimeFormat("en", { month: "short" }).format(date);
-  if (dateDetails.straightDate) {
+  // if (dateDetails.straightDate) {
+  //   month = new Intl.DateTimeFormat("en", { month: "2-digit" }).format(date);
+  // }
+
+  if (
+    dateDetails.straightDate ||
+    dateDetails.straightDateWithMilitaryTime ||
+    dateDetails.straightDateWithTime ||
+    dateDetails.straightDateDashMonthFirst
+  ) {
     month = new Intl.DateTimeFormat("en", { month: "2-digit" }).format(date);
   }
   const day = new Intl.DateTimeFormat("en", { day: "2-digit" }).format(date);
@@ -539,10 +589,16 @@ const formatDate2 = (dateDetails = null, delimeter = "-") => {
   else if (dateDetails.militaryTime) return `${convertTime12to24(time)}`;
   else if (dateDetails.straightDate)
     return `${year}${delimeter}${month}${delimeter}${day}`;
+  else if (dateDetails.straightDateWithTime)
+    return `${year}-${month}-${day} ${time}`;
   else if (dateDetails.withDayNameWithTime)
     return `${dayName.toUpperCase()}, ${month.toUpperCase()} ${day}, ${year} ${time} `;
   else if (dateDetails.withDayNameOnly)
     return `${dayName.toUpperCase()}, ${month.toUpperCase()} ${day}, ${year}`;
+  else if (dateDetails.withDayNameOnLast)
+    return `${month.toUpperCase()} ${day}, ${year} ${dayName.toUpperCase()},`;
+  else if (dateDetails.withDayNameAndTimeOnLast)
+    return `${month.toUpperCase()} ${day}, ${year} ${time} ${dayName.toUpperCase()}`;
   return `${month.toUpperCase()} ${day}, ${year} ${time} `;
 };
 
@@ -1566,13 +1622,27 @@ const getDaysFromBirthdate = (birthdateString) => {
   return Math.floor(days);
 };
 
-const convertURLtoBase64 = async (url) => {
+const convertURLtoBase64 = async (
+  url,
+  withCookies = false,
+  cookieString = "",
+) => {
+  console.log(cookieString);
   try {
-    const response = await axios.get(url, {
+    const config = {
       responseType: "arraybuffer", // Important for binary files
-    });
+      headers: {},
+    };
 
-    const contentType = response.headers["content-type"];
+    // Include cookies if requested
+    if (withCookies && cookieString) {
+      config.headers.Cookie = cookieString; // Node.js can set this manually
+    }
+
+    const response = await axios.get(url, config);
+
+    const contentType =
+      response.headers["content-type"] || "application/octet-stream";
     const base64 = Buffer.from(response.data, "binary").toString("base64");
 
     return `data:${contentType};base64,${base64}`;
@@ -1604,6 +1674,7 @@ module.exports = {
   buildHashTable: createMap, // ALIAS FOR BACKWARD COMPATIBILITY
   buildBreadcrumbs,
   sendEmail,
+  sendDynamicEmail,
   generateAlphaNumericStr,
   pascalToCamel,
   changeCase,

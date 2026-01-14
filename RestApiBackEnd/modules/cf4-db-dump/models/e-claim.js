@@ -1,7 +1,7 @@
 const db = require("../../../helpers/sql.js");
 const tableName = "EasyClaimsOffline..eClaim";
 
-const insert = async (
+const upsert = async (
   hospitalCode,
   transmittalNo,
   userCode,
@@ -9,7 +9,7 @@ const insert = async (
   _case,
   firstCaseRateResult,
   secondCaseRateResult,
-  txn
+  txn,
 ) => {
   if (!hospitalCode) throw "`hospitalCode` is required.";
   if (!transmittalNo) throw "`transmittalNo` is required.";
@@ -58,11 +58,11 @@ const insert = async (
     "CreatedBy",
     "Created",
     "UpdatedBy",
-    "Updated"
+    "Updated",
   );
 };
 
 module.exports = {
   table: tableName,
-  insert,
+  upsert,
 };

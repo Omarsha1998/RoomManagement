@@ -274,7 +274,7 @@ const uploadEmployees = async function (req, res) {
         groupedEmployees[category] = names;
       });
 
-      console.log(groupedEmployees);
+      // console.log(groupedEmployees);
 
       return groupedEmployees;
     } catch (error) {

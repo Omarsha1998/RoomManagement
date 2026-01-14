@@ -10,7 +10,7 @@ const columns = [
   { name: "deficiencyRemarks", default: "" },
 ];
 
-const insert = async (userCode, caseNo, item, txn) => {
+const upsert = async (userCode, caseNo, item, txn) => {
   if (!userCode) throw "`userCode` is required.";
   if (!caseNo) throw "`caseNo` is required.";
   if (!txn) throw "`txn` is required.";
@@ -36,5 +36,5 @@ const insert = async (userCode, caseNo, item, txn) => {
 module.exports = {
   table: tableName,
   columns,
-  insert,
+  upsert,
 };

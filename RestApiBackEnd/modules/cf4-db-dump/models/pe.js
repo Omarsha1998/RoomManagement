@@ -616,7 +616,7 @@ for (const column of columns) {
 
 const columnsMap = buildHashTable(columns, "name");
 
-const insert = async (userCode, consultationId, item, txn) => {
+const upsert = async (userCode, consultationId, item, txn) => {
   const row = db.createRow(item, columns);
 
   return await db.upsert(
@@ -636,5 +636,5 @@ module.exports = {
   table: tableName,
   columns,
   columnsMap,
-  insert,
+  upsert,
 };

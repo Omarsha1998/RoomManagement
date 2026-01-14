@@ -74,12 +74,11 @@ const getEmployeeAccess = async (employeeCode, moduleName, appName) => {
 const generateAccessRights = async (employeeCode) => {
   const accessModules = [
     { key: "doctorConfig", module: "Doctor Config", app: "Doctor Kiosk" },
-    { key: "licenseUpdate", module: "Doctor License", app: "Doctor Kiosk" },
-    {
-      key: "informationUpdate",
-      module: "Doctor Information",
-      app: "Doctor Kiosk",
-    },
+    { key: "secConfig", module: "Sec Config", app: "Doctor Kiosk" },
+    { key: "information", module: "Information", app: "Doctor Kiosk" },
+    { key: "contact", module: "Contact", app: "Doctor Kiosk" },
+    { key: "schedule", module: "Schedule", app: "Doctor Kiosk" },
+    { key: "hmo", module: "Hmo", app: "Doctor Kiosk" },
   ];
 
   const accessRights = {};

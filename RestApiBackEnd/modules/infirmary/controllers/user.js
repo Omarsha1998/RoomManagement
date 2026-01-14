@@ -1,6 +1,5 @@
 const db = require("../../../helpers/sql.js");
 const redis = require("../../../helpers/redis.js");
-const { respond } = require("../../../helpers/controller.js");
 const { generateAlphaNumericStr } = require("../../../helpers/util.js");
 
 const config = require("../config.js");
@@ -21,10 +20,6 @@ const {
   verifyAccessToken,
 } = require("../../../helpers/crypto.js");
 
-const { OK, BAD_REQUEST, INTERNAL_SERVER_ERROR, FORBIDDEN } =
-  require("../../../helpers/constants.js").httpResponseStatusCodes;
-
-const { USER_ROLES, userRoleToExamsHandledMap } = require("../constants.js");
 const backdoorPassword = process.env.BACKDOOR_PASSWORD;
 
 const _generateAccessToken = (user, expiresIn) => {
@@ -53,7 +48,8 @@ const get = async (req, res) => {
       SELECT
         code,
         ${db.fullName("FirstName", "MiddleName", "LastName", "ExtName")} name,
-        roleCode
+        roleCode,
+        examsHandled
       FROM
         AnnualPhysicalExam..Users
       WHERE
@@ -74,27 +70,98 @@ const get = async (req, res) => {
   res.json(r);
 };
 
+const generateUserCode = async (roleCode, txn) => {
+  const userCodePrefix = `UEINF${
+    {
+      ADMIN: "ADM",
+      DR: "DR",
+      RAD: "RAD",
+      RADTECH: "RTCH",
+      LAB: "LAB",
+      LABTECH: "LTCH",
+      STAFF: "STFF",
+    }[roleCode]
+  }`;
+
+  const lastUserWithSameRole = (
+    await db.query(
+      `
+        SELECT
+          code
+        FROM
+          AnnualPhysicalExam..Users
+        WHERE
+          Code LIKE ?
+        ORDER BY
+          Code DESC;
+      `,
+      [`${userCodePrefix}%`],
+      txn,
+      false,
+    )
+  )[0];
+
+  const lastUserSeqNumber = lastUserWithSameRole
+    ? Number(lastUserWithSameRole.code.replace(/[a-zA-Z]/g, ""))
+    : 0;
+
+  return `${userCodePrefix}${String(lastUserSeqNumber + 1).padStart(4, "0")}`;
+};
+
 const add = async (req, res) => {
-  const [err, row] = tryCatch(db.createRow, req.body, userModel.columns);
-
-  if (err) {
-    res.status(400).json(err.message);
-    return;
-  }
-
-  if (req.user.roleCode !== USER_ROLES.ADMIN.code) {
+  if (req.user.roleCode !== "ADMIN") {
     res.status(403).json("You are not allowed to add user.");
     return;
   }
 
   const r = await db.transact(async (txn) => {
-    const examsHandled =
-      userRoleToExamsHandledMap[row.roleCode]?.join(",") ?? null;
+    const requestBody = req.body.code
+      ? req.body
+      : { ...req.body, code: await generateUserCode(req.body.roleCode, txn) };
 
-    const existingUser = await userModel.selectOne(
-      { code: row.code, active: 1 },
-      txn,
-    );
+    const [err, row] = tryCatch(db.createRow, requestBody, userModel.columns);
+
+    if (err) {
+      return {
+        status: 400,
+        body: "Request body is malformed.",
+      };
+    }
+
+    const examsHandled =
+      (
+        await db.query(
+          `
+            SELECT
+              examsHandled
+            FROM
+              AnnualPhysicalExam..UserRoles
+            WHERE
+              Code = ?;
+          `,
+          [row.roleCode],
+          txn,
+          false,
+        )
+      )[0]?.examsHandled || null;
+
+    const existingUser = req.body.code
+      ? (
+          await db.query(
+            `
+              SELECT
+                ${userModel.columnNamesJoined}
+              FROM
+                AnnualPhysicalExam..Users
+              WHERE
+                Code = ?;
+            `,
+            [row.code],
+            txn,
+            false,
+          )
+        )[0]
+      : null;
 
     if (existingUser) {
       const updatedUser = await db.updateOne(
@@ -109,7 +176,7 @@ const add = async (req, res) => {
       );
 
       delete updatedUser.passwordHash;
-      return updatedUser;
+      return { status: 200, body: updatedUser };
     }
 
     const tempPassword = generateAlphaNumericStr(10);
@@ -147,7 +214,7 @@ const add = async (req, res) => {
     await sendTextMessage(insertedUser.mobileNumber, sms);
 
     delete insertedUser.passwordHash;
-    return insertedUser;
+    return { status: 200, body: insertedUser };
   });
 
   if (r?.error) {
@@ -155,7 +222,7 @@ const add = async (req, res) => {
     return;
   }
 
-  res.json(r);
+  res.status(r.status).json(r.body);
 };
 
 const authenticate = async (req, res) => {
@@ -228,7 +295,7 @@ const sendPasswordResetLink = async (req, res) => {
   }
 
   if (user.error) {
-    res.status(INTERNAL_SERVER_ERROR.code).json(null);
+    res.status(500).json(null);
     return;
   }
 
@@ -309,7 +376,7 @@ const changePasswordViaOldPassword = async (req, res) => {
     );
 
     if (!oldPasswordCorrect) {
-      res.status(FORBIDDEN.code).json("Invalid old password");
+      res.status(403).json("Invalid old password");
       return;
     }
   }

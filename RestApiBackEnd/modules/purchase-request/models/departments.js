@@ -99,6 +99,30 @@ const selectPRApprovers = async function (conditions, txn, options) {
   );
 };
 
+const selectMedicineDepartments = async function (
+  conditions,
+  args,
+  options,
+  txn,
+) {
+  return await sqlHelper.query(
+    `SELECT
+        id,
+        departmentCode,
+        type,
+        active,
+        dateTimeCreated,
+        dateTimeUpdated,
+        remarks
+      FROM UERMINV..MedicineDepartments
+      WHERE 1=1 ${conditions}
+      ${util.empty(options.order) ? "" : `order by ${options.order}`}
+      `,
+    args,
+    txn,
+  );
+};
+
 const updatePRApprover = async function (payload, condition, txn) {
   return await sqlHelper.update(
     "UERMINV..PurchaseRequestApprovers",
@@ -122,6 +146,7 @@ module.exports = {
   selectPRApprovers,
   selectPurchasingDepartments,
   selectPRDepartmentsApprover,
+  selectMedicineDepartments,
   updatePRApprover,
   insertPRApprover,
 };

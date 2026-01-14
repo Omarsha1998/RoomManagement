@@ -14,39 +14,90 @@ const { validateAccessToken } = require("../../../helpers/crypto");
 const router = Router();
 
 // GET REQUESTS
-router.get("/user-access", usersController.getUserAccess);
-router.get("/departments", departmentsController.getDepartments);
+router.get("/user-access", validateAccessToken, usersController.getUserAccess);
+
+router.get(
+  "/departments",
+  validateAccessToken,
+  departmentsController.getDepartments,
+);
 router.get("/doctors", validateAccessToken, departmentsController.getDoctors);
 
-router.get("/charges", testOrdersController.getTestOrders);
-router.get("/test-order-workflows", testOrdersController.getTestOrderWorkFlows);
-router.get("/test-components", testsController.getTestsAndComponents);
-router.get("/test-flaggings", testsController.getTestFlaggings);
+router.get("/charges", validateAccessToken, testOrdersController.getTestOrders);
+
+router.get(
+  "/test-order-workflows",
+  validateAccessToken,
+  testOrdersController.getTestOrderWorkFlows,
+);
+
+router.get(
+  "/test-components",
+  validateAccessToken,
+  testsController.getTestsAndComponents,
+);
+
+router.get(
+  "/test-flaggings",
+  validateAccessToken,
+  testsController.getTestFlaggings,
+);
+
 router.get(
   "/test-workflows",
   validateAccessToken,
   testWorkflowsController.getTestWorkFlows,
 );
-router.get("/patient-result", patientResultsController.getPatientResult);
+
+router.get(
+  "/patient-result",
+  validateAccessToken,
+  patientResultsController.getPatientResult,
+);
+
 router.get(
   "/patient-result-file",
+  validateAccessToken,
   patientResultsController.getPatientResultValueFile,
 );
 
 // POST REQUESTS
-router.post("/charges", testOrdersController.postTestOrders);
-router.post("/patient-result", patientResultsController.postPatientResult);
+router.post(
+  "/charges",
+  validateAccessToken,
+  testOrdersController.postTestOrders,
+);
+
+router.post(
+  "/patient-result",
+  validateAccessToken,
+  patientResultsController.postPatientResult,
+);
+
 router.post(
   "/patient-result-file",
+  validateAccessToken,
   patientResultsController.postPatientResultFile,
 );
+
 router.post(
   "/test-pdf",
   // express.text({ type: "text/html" }),
+  // validateAccessToken,
   pdfController.generatePDF,
 );
 
-router.post("/patient-result-printout", pdfController.generateDynamicPDF);
+router.post(
+  "/patient-result-printout",
+  validateAccessToken,
+  pdfController.generateDynamicPDF,
+);
+
+router.post(
+  "/send-notification",
+  validateAccessToken,
+  patientResultsController.sendNotification,
+);
 
 // PUT REQUESTS
 // router.put("/users/:code", validateAccessToken, userController.updateUser);

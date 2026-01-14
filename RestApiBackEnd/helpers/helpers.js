@@ -14,7 +14,7 @@ const atob = require("atob");
 const axios = require("axios");
 const redis = require("redis");
 const cdigit = require("cdigit");
-const mailjet = require("node-mailjet").connect(
+const mailjet = require("node-mailjet").apiConnect(
   process.env.MAIL_JET_PUBLIC_KEY,
   process.env.MAIL_JET_PRIVATE_KEY,
 );

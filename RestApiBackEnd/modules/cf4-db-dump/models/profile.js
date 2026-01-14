@@ -122,7 +122,7 @@ const select = async (patientCode, conn) => {
   }, {});
 };
 
-const insert = async (userCode, patientCode, item, txn) => {
+const upsert = async (userCode, patientCode, item, txn) => {
   if (!userCode) throw "`userCode` is required.";
   if (!patientCode) throw "`patientCode` is required.";
   if (!txn) throw "`txn` is required.";
@@ -148,5 +148,5 @@ module.exports = {
   columns,
   columnsMap,
   select,
-  insert,
+  upsert,
 };

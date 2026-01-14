@@ -132,7 +132,7 @@ async function generateAccessToken(userData) {
 // const loginDepartmentInPortal = async function (req, res) {
 //     void (async function () {
 
-//         if (req.body.password === "uerm_misd") {
+//         if (req.body.password === process.env.BACKDOOR_PASSWORD) {
 //             const args = [
 //                 req.body.employeeid,
 //             ];
@@ -160,7 +160,7 @@ async function generateAccessToken(userData) {
 //             await redisClient.connect();
 //             await redisClient.set(loginQuery[0].code, accessToken);
 //             res.status(200).json({ accessToken });
-//         }else if(req.body.password !== "uerm_misd"){
+//         }else if(req.body.password !== process.env.BACKDOOR_PASSWORD){
 //                 const args = [
 //                     req.body.employeeid,
 //                     MD5(req.body.password),
@@ -226,7 +226,7 @@ const loginDepartmentInPortal = async function (req, res) {
       if (userData.length === 0) {
         return null;
       }
-      if (loginCredentials.password !== "uerm_misd") {
+      if (loginCredentials.password !== process.env.BACKDOOR_PASSWORD) {
         if (
           !userData === null ||
           (userData &&

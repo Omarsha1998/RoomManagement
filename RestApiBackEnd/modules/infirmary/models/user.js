@@ -21,6 +21,7 @@ const columns = [
 ];
 
 const columnNames = columns.map((c) => c.name);
+const columnNamesJoined = columnNames.join(",");
 
 const selectOne = async (conditions, txn) => {
   const row = await db.selectOne(
@@ -48,7 +49,10 @@ const updatePassword = async (userCode, newPassword) => {
   return await db.transact(async (txn) => {
     const updatedUser = await db.updateOne(
       "AnnualPhysicalExam..Users",
-      { passwordHash: await hashPassword(newPassword) },
+      {
+        passwordHash: await hashPassword(newPassword),
+        updatedBy: userCode,
+      },
       { code: userCode },
       txn,
     );
@@ -60,6 +64,8 @@ const updatePassword = async (userCode, newPassword) => {
 
 module.exports = {
   columns,
+  columnNames,
+  columnNamesJoined,
   selectOne,
   deauthenticate,
   updatePassword,

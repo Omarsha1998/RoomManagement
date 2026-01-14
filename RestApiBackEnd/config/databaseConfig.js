@@ -8,6 +8,10 @@ module.exports = {
     encrypt: false,
     appName: "uerm-rest-api-local",
     useUTC: false,
+    trustServerCertificate: true,
+    // rowCollectionOnRequestCompletion: false,
+    // rowCollectionOnDone: false,
+    // useColumnNames: true,
   },
   dialectOptions: {
     appName: "uerm-rest-api-local",

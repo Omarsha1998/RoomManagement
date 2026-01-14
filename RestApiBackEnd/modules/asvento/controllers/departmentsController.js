@@ -108,9 +108,9 @@ const getPrimaryOnly = async function (req, res) {
   const returnValue = await sqlHelper.transact(async (txn) => {
     let sqlWhere = "";
     let args = [];
-    sqlWhere = `and hrDepts.DESCRIPTION not LIKE '%N/A%' and  hrDepts.DESCRIPTION not LIKE  '%INACTIVE%' and subDept.deptStatus =? `;
+    sqlWhere = `and hrDepts.DESCRIPTION not LIKE '%N/A%' and  hrDepts.DESCRIPTION not LIKE  '%INACTIVE%'`;
     // sqlWhere = `and deptName not LIKE '%INACTIVE%' and deptName not LIKE '%N/A%'`;
-    args = ["P"];
+    args = [];
     const options = {
       top: "",
       order: "",
@@ -121,6 +121,7 @@ const getPrimaryOnly = async function (req, res) {
   if (returnValue.error !== undefined) {
     return res.status(500).json({ error: `${returnValue.error}` });
   }
+
   return res.json(returnValue);
 };
 

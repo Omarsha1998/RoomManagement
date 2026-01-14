@@ -1,5 +1,5 @@
 const db = require("../../../../helpers/sql.js");
-const { tryCatch, sliceObj } = require("../../../../helpers/util.js");
+const { tryCatch } = require("../../../../helpers/util.js");
 
 const patientModel = require("../../models/ape/patient.js");
 
@@ -9,11 +9,7 @@ const add = async (req, res) => {
     return;
   }
 
-  const [err, row] = tryCatch(
-    db.createRow,
-    sliceObj(req.body, "year"),
-    patientModel.columns,
-  );
+  const [err, row] = tryCatch(db.createRow, req.body, patientModel.columns);
 
   if (err) {
     res.status(400).json(err.message);

@@ -1,7 +1,6 @@
 const otherRequestsModel = require("./otherRequestsModel.js");
 const helperMethods = require("../utility/helperMethods.js");
-const { SQLDataTypes } = require('../utility/enums.js'); 
-
+const { SQLDataTypes } = require("../utility/enums.js");
 
 async function getPending(employeeID, dateFrom, dateTo) {
   let query = `SELECT DISTINCT
@@ -41,15 +40,15 @@ async function getPending(employeeID, dateFrom, dateTo) {
   const parameters = [
     { name: "EmployeeID", dataType: SQLDataTypes.VARCHAR, value: employeeID },
     { name: "DateFrom", dataType: SQLDataTypes.DATE, value: dateFrom },
-    { name: "DateTo", dataType: SQLDataTypes.DATE, value: dateTo }
+    { name: "DateTo", dataType: SQLDataTypes.DATE, value: dateTo },
   ];
 
-  const requestHdr = (await helperMethods.executeQuery(query, parameters)).recordset;
+  const requestHdr = (await helperMethods.executeQuery(query, parameters))
+    .recordset;
 
   let response;
 
   for (const index in requestHdr) {
-
     query = `SELECT DISTINCT
     ISNULL(TRIM(F.FullName), '') AS 'sibling_or_child_full_name',
     D.FamilyRecno AS 'family_id',
@@ -60,18 +59,22 @@ async function getPending(employeeID, dateFrom, dateTo) {
     WHERE D.RequestHdrID = @RequestHdrID`;
 
     const parameters = [
-      { name: "RequestHdrID", dataType: SQLDataTypes.INT, value: requestHdr[index].request_id }
+      {
+        name: "RequestHdrID",
+        dataType: SQLDataTypes.INT,
+        value: requestHdr[index].request_id,
+      },
     ];
 
     response = await helperMethods.executeQuery(query, parameters);
     const totalLength = response.recordset.length;
-    requestHdr[index].are_siblings_or_children = (totalLength > 1) ? true : false;
+    requestHdr[index].are_siblings_or_children = totalLength > 1 ? true : false;
 
     const result = response.recordset;
     const dtl = [];
     for (const item of result) {
       // ------------------------------------------------- CREATE -------------------------------------------------
-      if (requestHdr[index].request_type === 'create') {
+      if (requestHdr[index].request_type === "create") {
         query = `SELECT 
         D.ID AS 'id',
         TRIM(D.ColumnName) AS 'column_name',
@@ -88,25 +91,43 @@ async function getPending(employeeID, dateFrom, dateTo) {
         AND D.ApprovedBy IS NULL
         AND D.DateTimeApproved IS NULL`;
 
-        if (item.person_queue_number !== null) query += " AND D.PersonQueueNumber = @PersonQueueNumber";
+        if (item.person_queue_number !== null)
+          query += " AND D.PersonQueueNumber = @PersonQueueNumber";
         query += " ORDER BY D.ID ASC";
 
         const parameters = [
-          { name: "RequestHdrID", dataType: SQLDataTypes.INT, value: requestHdr[index].request_id }
+          {
+            name: "RequestHdrID",
+            dataType: SQLDataTypes.INT,
+            value: requestHdr[index].request_id,
+          },
         ];
 
-        if (item.person_queue_number !== null) parameters.push({ name: "PersonQueueNumber", dataType: SQLDataTypes.INT, value: item.person_queue_number });
+        if (item.person_queue_number !== null)
+          parameters.push({
+            name: "PersonQueueNumber",
+            dataType: SQLDataTypes.INT,
+            value: item.person_queue_number,
+          });
 
         response = await helperMethods.executeQuery(query, parameters);
 
         if (response.recordset.length > 0) {
-          if  (totalLength > 1)  dtl.push({ table_rows: await otherRequestsModel.renameColumnName(response.recordset) });
-          requestHdr[index].details = (totalLength > 1) ? dtl : await otherRequestsModel.renameColumnName(response.recordset);
+          if (totalLength > 1)
+            dtl.push({
+              table_rows: await otherRequestsModel.renameColumnName(
+                response.recordset,
+              ),
+            });
+          requestHdr[index].details =
+            totalLength > 1
+              ? dtl
+              : await otherRequestsModel.renameColumnName(response.recordset);
         }
       }
       // ------------------------------------------------- CREATE -------------------------------------------------
       // ------------------------------------------------- EDIT -------------------------------------------------
-      else if (requestHdr[index].request_type === 'edit') {
+      else if (requestHdr[index].request_type === "edit") {
         query = `SELECT 
                   D.ID AS 'id',
                   TRIM(D.ColumnName) AS 'column_name',
@@ -124,36 +145,57 @@ async function getPending(employeeID, dateFrom, dateTo) {
                   AND D.ApprovedBy IS NULL
                   AND D.DateTimeApproved IS NULL`;
 
-
-        if (item.family_id !== null) query += " AND D.FamilyRecno = @FamilyRecno";
+        if (item.family_id !== null)
+          query += " AND D.FamilyRecno = @FamilyRecno";
         query += " ORDER BY D.ID ASC";
 
         const parameters = [
-          { name: "RequestHdrID", dataType: SQLDataTypes.INT, value: requestHdr[index].request_id }
+          {
+            name: "RequestHdrID",
+            dataType: SQLDataTypes.INT,
+            value: requestHdr[index].request_id,
+          },
         ];
 
-        if (item.family_id !== null) parameters.push({ name: "FamilyRecno", dataType: SQLDataTypes.INT, value: item.family_id });
+        if (item.family_id !== null)
+          parameters.push({
+            name: "FamilyRecno",
+            dataType: SQLDataTypes.INT,
+            value: item.family_id,
+          });
 
         response = await helperMethods.executeQuery(query, parameters);
 
         if (response.recordset.length > 0) {
-          if  (totalLength > 1) {
-          const obj = {
-            sibling_or_child_full_name: item.sibling_or_child_full_name,
-            table_rows: await otherRequestsModel.renameColumnName(response.recordset)
-          };
-          dtl.push(obj);
-         }
-          requestHdr[index].details = (totalLength > 1) ? dtl : await otherRequestsModel.renameColumnName(response.recordset);
+          if (totalLength > 1) {
+            const obj = {
+              sibling_or_child_full_name: item.sibling_or_child_full_name,
+              table_rows: await otherRequestsModel.renameColumnName(
+                response.recordset,
+              ),
+            };
+            dtl.push(obj);
+          }
+          requestHdr[index].details =
+            totalLength > 1
+              ? dtl
+              : await otherRequestsModel.renameColumnName(response.recordset);
         }
       }
       // ------------------------------------------------- EDIT -------------------------------------------------
-      else throw 'Invalid request type in getPending()';
+      else throw "Invalid request type in getPending()";
     }
 
-    requestHdr[index].description = await otherRequestsModel.getDescription(requestHdr[index].created_by, requestHdr[index].request_id);
+    requestHdr[index].description = await otherRequestsModel.getDescription(
+      requestHdr[index].created_by,
+      requestHdr[index].request_id,
+    );
     const statusID = 0;
-    requestHdr[index].requested_fields = await otherRequestsModel.getRequestedFields(requestHdr[index].request_id, statusID);
+    requestHdr[index].requested_fields =
+      await otherRequestsModel.getRequestedFields(
+        requestHdr[index].request_id,
+        statusID,
+      );
   }
 
   return requestHdr;
@@ -195,13 +237,13 @@ async function getApproved(employeeID, dateFrom, dateTo) {
   const parameters = [
     { name: "EmployeeID", dataType: SQLDataTypes.VARCHAR, value: employeeID },
     { name: "DateFrom", dataType: SQLDataTypes.DATE, value: dateFrom },
-    { name: "DateTo", dataType: SQLDataTypes.DATE, value: dateTo }
+    { name: "DateTo", dataType: SQLDataTypes.DATE, value: dateTo },
   ];
 
-  const requestHdr = (await helperMethods.executeQuery(query, parameters)).recordset;
+  const requestHdr = (await helperMethods.executeQuery(query, parameters))
+    .recordset;
 
   for (const index in requestHdr) {
-
     query = `SELECT DISTINCT
     ISNULL(TRIM(F.FullName), '') AS 'sibling_or_child_full_name',
     D.FamilyRecno AS 'family_id',
@@ -212,19 +254,23 @@ async function getApproved(employeeID, dateFrom, dateTo) {
     WHERE D.RequestHdrID = @RequestHdrID`;
 
     const parameters = [
-      { name: "RequestHdrID", dataType: SQLDataTypes.INT, value: requestHdr[index].request_id }
+      {
+        name: "RequestHdrID",
+        dataType: SQLDataTypes.INT,
+        value: requestHdr[index].request_id,
+      },
     ];
 
     let response = await helperMethods.executeQuery(query, parameters);
 
     const totalLength = response.recordset.length;
-    requestHdr[index].are_siblings_or_children = (totalLength > 1) ? true : false;
+    requestHdr[index].are_siblings_or_children = totalLength > 1 ? true : false;
 
     const result = response.recordset;
     const dtl = [];
     for (const item of result) {
       // ------------------------------------------------- CREATE -------------------------------------------------
-      if (requestHdr[index].request_type === 'create') {
+      if (requestHdr[index].request_type === "create") {
         query = `SELECT 
         D.ID AS 'id',
         D.DateTimeApproved AS 'date_time_approved',
@@ -239,30 +285,45 @@ async function getApproved(employeeID, dateFrom, dateTo) {
         AND D.ApprovedBy IS NOT NULL
         AND D.DateTimeApproved IS NOT NULL`;
 
-        if (item.person_queue_number !== null) query += " AND D.PersonQueueNumber = @PersonQueueNumber";
+        if (item.person_queue_number !== null)
+          query += " AND D.PersonQueueNumber = @PersonQueueNumber";
         query += " ORDER BY D.DateTimeApproved ASC";
 
         const parameters = [
-          { name: "RequestHdrID", dataType: SQLDataTypes.INT, value: requestHdr[index].request_id }
+          {
+            name: "RequestHdrID",
+            dataType: SQLDataTypes.INT,
+            value: requestHdr[index].request_id,
+          },
         ];
 
-        if (item.person_queue_number !== null) parameters.push({ name: "PersonQueueNumber", dataType: SQLDataTypes.INT, value: item.person_queue_number });
+        if (item.person_queue_number !== null)
+          parameters.push({
+            name: "PersonQueueNumber",
+            dataType: SQLDataTypes.INT,
+            value: item.person_queue_number,
+          });
 
         response = await helperMethods.executeQuery(query, parameters);
 
         if (response.recordset.length > 0) {
-         if (totalLength > 1) { 
-          const obj = {
-            table_rows: await otherRequestsModel.renameColumnName(response.recordset)
-          };
-          dtl.push(obj);
-        }
-          requestHdr[index].details = (totalLength > 1) ? dtl : await otherRequestsModel.renameColumnName(response.recordset);
+          if (totalLength > 1) {
+            const obj = {
+              table_rows: await otherRequestsModel.renameColumnName(
+                response.recordset,
+              ),
+            };
+            dtl.push(obj);
+          }
+          requestHdr[index].details =
+            totalLength > 1
+              ? dtl
+              : await otherRequestsModel.renameColumnName(response.recordset);
         }
       }
       // ------------------------------------------------- CREATE -------------------------------------------------
       // ------------------------------------------------- EDIT -------------------------------------------------
-      else if (requestHdr[index].request_type === 'edit') {
+      else if (requestHdr[index].request_type === "edit") {
         query = `SELECT 
         D.ID AS 'id',
         D.DateTimeApproved AS 'date_time_approved',
@@ -278,45 +339,69 @@ async function getApproved(employeeID, dateFrom, dateTo) {
         AND D.ApprovedBy IS NOT NULL
         AND D.DateTimeApproved IS NOT NULL`;
 
-
-        if (item.family_id !== null) query += " AND D.FamilyRecno = @FamilyRecno";
+        if (item.family_id !== null)
+          query += " AND D.FamilyRecno = @FamilyRecno";
         query += " ORDER BY D.DateTimeApproved ASC";
 
         const parameters = [
-          { name: "RequestHdrID", dataType: SQLDataTypes.INT, value: requestHdr[index].request_id }
+          {
+            name: "RequestHdrID",
+            dataType: SQLDataTypes.INT,
+            value: requestHdr[index].request_id,
+          },
         ];
 
-        if (item.family_id !== null) parameters.push({ name: "FamilyRecno", dataType: SQLDataTypes.INT, value: item.family_id });
+        if (item.family_id !== null)
+          parameters.push({
+            name: "FamilyRecno",
+            dataType: SQLDataTypes.INT,
+            value: item.family_id,
+          });
 
         response = await helperMethods.executeQuery(query, parameters);
 
         if (response.recordset.length > 0) {
-          if  (totalLength > 1) {
-          const obj = {
-            sibling_or_child_full_name: item.sibling_or_child_full_name,
-            table_rows: await otherRequestsModel.renameColumnName(response.recordset)
-          };
-          dtl.push(obj);
-         }
-          requestHdr[index].details = (totalLength > 1) ? dtl : await otherRequestsModel.renameColumnName(response.recordset);
+          if (totalLength > 1) {
+            const obj = {
+              sibling_or_child_full_name: item.sibling_or_child_full_name,
+              table_rows: await otherRequestsModel.renameColumnName(
+                response.recordset,
+              ),
+            };
+            dtl.push(obj);
+          }
+          requestHdr[index].details =
+            totalLength > 1
+              ? dtl
+              : await otherRequestsModel.renameColumnName(response.recordset);
         }
       }
       // ------------------------------------------------- EDIT -------------------------------------------------
       else {
-        throw 'Invalid request type in getApproved()';
+        throw "Invalid request type in getApproved()";
       }
-
     }
 
-    requestHdr[index].description = await otherRequestsModel.getDescription(requestHdr[index].created_by, requestHdr[index].request_id);
+    requestHdr[index].description = await otherRequestsModel.getDescription(
+      requestHdr[index].created_by,
+      requestHdr[index].request_id,
+    );
     const statusID = 1;
-    requestHdr[index].requested_fields = await otherRequestsModel.getRequestedFields(requestHdr[index].request_id, statusID);
+    requestHdr[index].requested_fields =
+      await otherRequestsModel.getRequestedFields(
+        requestHdr[index].request_id,
+        statusID,
+      );
   }
 
   return requestHdr;
 }
 
-async function getCurrentAddressOrPermanentAddressDetails(transaction, requestHdrID, columnName) {
+async function getCurrentAddressOrPermanentAddressDetails(
+  transaction,
+  requestHdrID,
+  columnName,
+) {
   const query = `SELECT 
   TRIM(NewValue) AS 'NewValue' 
   FROM [UE database]..RequestDtl 
@@ -326,15 +411,24 @@ async function getCurrentAddressOrPermanentAddressDetails(transaction, requestHd
 
   const parameters = [
     { name: "ID", dataType: SQLDataTypes.INT, value: requestHdrID },
-    { name: "ColumnName", dataType: SQLDataTypes.VARCHAR, value: `%${  columnName  }%` },
+    {
+      name: "ColumnName",
+      dataType: SQLDataTypes.VARCHAR,
+      value: `%${columnName}%`,
+    },
   ];
 
- const response = await helperMethods.executeQuery(query, parameters, transaction);
+  const response = await helperMethods.executeQuery(
+    query,
+    parameters,
+    transaction,
+  );
   return response.recordset;
 }
 
 function isDetailsMatch(currentAddressDetails, permanentAddressDetails) {
-  if (currentAddressDetails.length !== permanentAddressDetails.length) return false;
+  if (currentAddressDetails.length !== permanentAddressDetails.length)
+    return false;
 
   for (let i = 0; i < currentAddressDetails.length; i++) {
     // If any elements don't match, return false
@@ -351,10 +445,12 @@ async function requestNotHighLightedToRequester(requestID) {
                  WHERE ID = @ID`;
 
   const parameters = [
-    { name: "ID", dataType: SQLDataTypes.INT, value: requestID }
+    { name: "ID", dataType: SQLDataTypes.INT, value: requestID },
   ];
 
-  helperMethods.checkRowsAffected(await helperMethods.executeQuery(query, parameters));
+  helperMethods.checkRowsAffected(
+    await helperMethods.executeQuery(query, parameters),
+  );
 }
 
 async function getMinimumDateWithPendingRequest(employeeID) {
@@ -368,11 +464,13 @@ async function getMinimumDateWithPendingRequest(employeeID) {
   ORDER BY H.DateTimeCreated ASC`;
 
   const parameters = [
-    { name: "EmployeeID", dataType: SQLDataTypes.INT, value: employeeID }
+    { name: "EmployeeID", dataType: SQLDataTypes.INT, value: employeeID },
   ];
 
   const response = await helperMethods.executeQuery(query, parameters);
-  return (response.recordset[0] !== undefined) ? response.recordset[0].DateTimeCreated : '1900-01-01';
+  return response.recordset[0] !== undefined
+    ? response.recordset[0].DateTimeCreated
+    : "1900-01-01";
 }
 
 function getID(requestDtlID) {
@@ -399,7 +497,9 @@ async function getAllProvinces(requestDtlID) {
                WHERE LEFT(Code, 2) = LEFT(@RegionCode, 2)
                ORDER BY [NAME] ASC`;
 
-  parameters = [{ name: "RegionCode", dataType: SQLDataTypes.VARCHAR, value: regionCode }];
+  parameters = [
+    { name: "RegionCode", dataType: SQLDataTypes.VARCHAR, value: regionCode },
+  ];
   response = await helperMethods.executeQuery(query, parameters);
   return response.recordset;
 }
@@ -425,7 +525,13 @@ async function getAllCitiesOrMunicipalities(requestDtlID) {
                AND LEFT(Code, 4) = LEFT(@ProvinceCode, 4)
                ORDER BY [NAME] ASC`;
 
-  parameters = [{ name: "ProvinceCode", dataType: SQLDataTypes.VARCHAR, value: provinceCode }];
+  parameters = [
+    {
+      name: "ProvinceCode",
+      dataType: SQLDataTypes.VARCHAR,
+      value: provinceCode,
+    },
+  ];
   response = await helperMethods.executeQuery(query, parameters);
   return response.recordset;
 }
@@ -449,7 +555,9 @@ async function getAllMajors(requestDtlID) {
             WHERE CollegeCourseID = @CourseID
             ORDER BY [Description] ASC`;
 
-  parameters = [{ name: "CourseID", dataType: SQLDataTypes.INT, value: courseID }];
+  parameters = [
+    { name: "CourseID", dataType: SQLDataTypes.INT, value: courseID },
+  ];
 
   response = await helperMethods.executeQuery(query, parameters);
   return response.recordset;
@@ -465,7 +573,9 @@ async function deleteRequest(employeeID, requestID) {
     { name: "ID", dataType: SQLDataTypes.INT, value: requestID },
   ];
 
-  helperMethods.checkRowsAffected(await helperMethods.executeQuery(query, parameters));
+  helperMethods.checkRowsAffected(
+    await helperMethods.executeQuery(query, parameters),
+  );
 }
 
 async function rename(transaction, requestHDRID, newValue, columnValue) {
@@ -481,12 +591,16 @@ async function rename(transaction, requestHDRID, newValue, columnValue) {
     { name: "ColumnValue", dataType: SQLDataTypes.VARCHAR, value: columnValue },
   ];
 
-  const response = await helperMethods.executeQuery(query, parameters, transaction);
+  const response = await helperMethods.executeQuery(
+    query,
+    parameters,
+    transaction,
+  );
 
   const id = response.recordset[0].ID;
   const currentValue = response.recordset[0].NewValue.trim();
 
-  const newCertificate = `${newValue.trim()  }.pdf`;
+  const newCertificate = `${newValue.trim()}.pdf`;
 
   query = `UPDATE [UE database]..RequestDtl 
     SET NewValue = @NewValue
@@ -497,10 +611,12 @@ async function rename(transaction, requestHDRID, newValue, columnValue) {
     { name: "ID", dataType: SQLDataTypes.INT, value: id },
   ];
 
-  helperMethods.checkRowsAffected(await helperMethods.executeQuery(query, parameters, transaction));
+  helperMethods.checkRowsAffected(
+    await helperMethods.executeQuery(query, parameters, transaction),
+  );
 
   const uploadedFolderPath = helperMethods.getUploadedFolderPath();
-  const fullPath = `${uploadedFolderPath  }/requests/pending/${  requestHDRID  }/value/${  currentValue}`;
+  const fullPath = `${uploadedFolderPath}/requests/pending/${requestHDRID}/value/${currentValue}`;
 
   await helperMethods.renameFile(fullPath, newCertificate);
 }
@@ -509,27 +625,50 @@ async function get(employeeID, dateRangeSearch) {
   const myRequests = dateRangeSearch.my_requests;
 
   return {
-    minimum_date_with_pending_request: await getMinimumDateWithPendingRequest(employeeID),
-    pending: await getPending(employeeID, myRequests.pending.date_from, myRequests.pending.date_to),
-    approved: await getApproved(employeeID, myRequests.approved.date_from, myRequests.approved.date_to),
-  }
+    minimum_date_with_pending_request:
+      await getMinimumDateWithPendingRequest(employeeID),
+    pending: await getPending(
+      employeeID,
+      myRequests.pending.date_from,
+      myRequests.pending.date_to,
+    ),
+    approved: await getApproved(
+      employeeID,
+      myRequests.approved.date_from,
+      myRequests.approved.date_to,
+    ),
+  };
 }
 
-async function updateColumnPermanentAddressIsSameAsCurrentAddress(transaction, requestHdrID) {
+async function updateColumnPermanentAddressIsSameAsCurrentAddress(
+  transaction,
+  requestHdrID,
+) {
   const currentAddressDetails = [];
   const permanentAddressDetails = [];
 
-  let details = await getCurrentAddressOrPermanentAddressDetails(transaction, requestHdrID, "CurrentAddress_");
+  let details = await getCurrentAddressOrPermanentAddressDetails(
+    transaction,
+    requestHdrID,
+    "CurrentAddress_",
+  );
   for (const item of details) {
     currentAddressDetails.push(item.NewValue);
   }
 
-  details = await getCurrentAddressOrPermanentAddressDetails(transaction, requestHdrID, "PermanentAddress_");
+  details = await getCurrentAddressOrPermanentAddressDetails(
+    transaction,
+    requestHdrID,
+    "PermanentAddress_",
+  );
   for (const item of details) {
     permanentAddressDetails.push(item.NewValue);
   }
 
-  const isCurrentAddressAndPermanentAddressMatched = isDetailsMatch(currentAddressDetails, permanentAddressDetails);
+  const isCurrentAddressAndPermanentAddressMatched = isDetailsMatch(
+    currentAddressDetails,
+    permanentAddressDetails,
+  );
 
   const query = `UPDATE [UE database]..RequestDtl 
       SET NewValue = @NewValue
@@ -538,34 +677,54 @@ async function updateColumnPermanentAddressIsSameAsCurrentAddress(transaction, r
 
   const parameters = [
     { name: "RequestHdrID", dataType: SQLDataTypes.INT, value: requestHdrID },
-    { name: "NewValue", dataType: SQLDataTypes.VARCHAR, value: isCurrentAddressAndPermanentAddressMatched.toString().toUpperCase() },
+    {
+      name: "NewValue",
+      dataType: SQLDataTypes.VARCHAR,
+      value: isCurrentAddressAndPermanentAddressMatched
+        .toString()
+        .toUpperCase(),
+    },
   ];
 
-  helperMethods.checkRowsAffected(await helperMethods.executeQuery(query, parameters, transaction));
+  helperMethods.checkRowsAffected(
+    await helperMethods.executeQuery(query, parameters, transaction),
+  );
 }
 
 async function submitComply(data) {
   let transaction;
   try {
-
     let newValue;
 
-    if (typeof data.value !== 'object') newValue = data.value.toString();
+    if (typeof data.value !== "object") newValue = data.value.toString();
 
     transaction = await helperMethods.beginTransaction();
 
     let query = `UPDATE [UE database]..RequestDtl 
-                 SET `
+                 SET `;
 
-    if (typeof data.value !== 'object') query += `NewValue = @NewValue, `
+    if (typeof data.value !== "object") query += `NewValue = @NewValue, `;
 
     query += `IsComplied = 1 WHERE ID = @ID`;
 
-    let parameters = [{ name: "ID", dataType: SQLDataTypes.INT, value: data.request_details_id }];
+    let parameters = [
+      {
+        name: "ID",
+        dataType: SQLDataTypes.INT,
+        value: data.request_details_id,
+      },
+    ];
 
-    if (typeof data.value !== 'object') parameters.push({ name: "NewValue", dataType: SQLDataTypes.VARCHAR, value: newValue });
+    if (typeof data.value !== "object")
+      parameters.push({
+        name: "NewValue",
+        dataType: SQLDataTypes.VARCHAR,
+        value: newValue,
+      });
 
-    helperMethods.checkRowsAffected(await helperMethods.executeQuery(query, parameters, transaction));
+    helperMethods.checkRowsAffected(
+      await helperMethods.executeQuery(query, parameters, transaction),
+    );
 
     query = `SELECT TOP 1 
     RequestHdrID,
@@ -574,10 +733,18 @@ async function submitComply(data) {
     WHERE ID = @ID`;
 
     parameters = [
-      { name: "ID", dataType: SQLDataTypes.INT, value: data.request_details_id }
+      {
+        name: "ID",
+        dataType: SQLDataTypes.INT,
+        value: data.request_details_id,
+      },
     ];
 
-    const response = await helperMethods.executeQuery(query, parameters, transaction);
+    const response = await helperMethods.executeQuery(
+      query,
+      parameters,
+      transaction,
+    );
 
     const requestHdrID = response.recordset[0].RequestHdrID;
     const columnName = response.recordset[0].ColumnName;
@@ -587,17 +754,29 @@ async function submitComply(data) {
       WHERE ID = @ID`;
 
     parameters = [
-      { name: "ID", dataType: SQLDataTypes.INT, value: requestHdrID }
+      { name: "ID", dataType: SQLDataTypes.INT, value: requestHdrID },
     ];
 
-    helperMethods.checkRowsAffected(await helperMethods.executeQuery(query, parameters, transaction));
+    helperMethods.checkRowsAffected(
+      await helperMethods.executeQuery(query, parameters, transaction),
+    );
 
     if (columnName === "TrainingOrSeminarName")
-      await rename(transaction, requestHdrID, newValue, 'TRAINING OR SEMINAR CERTIFICATE');
+      await rename(
+        transaction,
+        requestHdrID,
+        newValue,
+        "TRAINING OR SEMINAR CERTIFICATE",
+      );
 
-
-    if (columnName.includes("CurrentAddress_") || columnName.includes("PermanentAddress_"))
-      await updateColumnPermanentAddressIsSameAsCurrentAddress(transaction, requestHdrID);
+    if (
+      columnName.includes("CurrentAddress_") ||
+      columnName.includes("PermanentAddress_")
+    )
+      await updateColumnPermanentAddressIsSameAsCurrentAddress(
+        transaction,
+        requestHdrID,
+      );
 
     await helperMethods.commitTransaction(transaction);
   } catch (error) {
@@ -613,5 +792,5 @@ module.exports = {
   getAllProvinces,
   getAllCitiesOrMunicipalities,
   getAllMajors,
-  deleteRequest
-}
+  deleteRequest,
+};

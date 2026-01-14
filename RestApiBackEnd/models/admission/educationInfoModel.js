@@ -34,6 +34,7 @@ const getApplicantEducationInfo = async function (
       intermediateCoCurricularAwards,
       intermediateOtherCocurricularAwards,
       highschool,
+      otherHighschool,
       highschool_address highschoolAddress,
       highschool_years highschoolYearGraduate,
       highschoolStatus,

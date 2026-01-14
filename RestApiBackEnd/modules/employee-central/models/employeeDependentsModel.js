@@ -1,5 +1,5 @@
 const helperMethods = require("../utility/helperMethods.js");
-const { SQLDataTypes } = require('../utility/enums.js'); 
+const { SQLDataTypes } = require("../utility/enums.js");
 
 async function getAllDepartments() {
   const query = `SELECT T.* FROM
@@ -17,7 +17,13 @@ async function getAllDepartments() {
   return (await helperMethods.executeQuery(query)).recordset;
 }
 
-async function getEmployees(departmentID, employeeCode, lastName, firstName, middleName) {
+async function getEmployees(
+  departmentID,
+  employeeCode,
+  lastName,
+  firstName,
+  middleName,
+) {
   let query = `SELECT 
                   E.EmployeeCode AS 'employee_id',
                   E.LastName AS 'last_name',
@@ -56,24 +62,52 @@ async function getEmployees(departmentID, employeeCode, lastName, firstName, mid
 				          ON B.ClassBenefits = E.ClassBenefitCode
                   WHERE E.IsActive IN (1,0) `;
 
-  if (departmentID !== '0') query += `AND S.Code = @DepartmentID `;
-  if (!helperMethods.isNullOrUndefinedOrEmpty(employeeCode)) query += "AND E.EmployeeCode LIKE @EmployeeCode ";
-  if (!helperMethods.isNullOrUndefinedOrEmpty(lastName))  query += "AND E.LastName LIKE @LastName ";
-  if (!helperMethods.isNullOrUndefinedOrEmpty(firstName)) query += "AND E.FirstName LIKE @FirstName ";
-  if (!helperMethods.isNullOrUndefinedOrEmpty(middleName)) query += "AND E.MiddleName LIKE @MiddleName ";
+  if (departmentID !== "0") query += `AND S.Code = @DepartmentID `;
+  if (!helperMethods.isNullOrUndefinedOrEmpty(employeeCode))
+    query += "AND E.EmployeeCode LIKE @EmployeeCode ";
+  if (!helperMethods.isNullOrUndefinedOrEmpty(lastName))
+    query += "AND E.LastName LIKE @LastName ";
+  if (!helperMethods.isNullOrUndefinedOrEmpty(firstName))
+    query += "AND E.FirstName LIKE @FirstName ";
+  if (!helperMethods.isNullOrUndefinedOrEmpty(middleName))
+    query += "AND E.MiddleName LIKE @MiddleName ";
 
   query += `ORDER BY E.LastName ASC`;
 
   const parameters = [];
 
-  if (departmentID !== "0") parameters.push({ name: "DepartmentID", dataType: SQLDataTypes.VARCHAR, value: departmentID });
-  if (!helperMethods.isNullOrUndefinedOrEmpty(employeeCode)) parameters.push({ name: "EmployeeCode", dataType: SQLDataTypes.VARCHAR, value:  employeeCode });
-  if (!helperMethods.isNullOrUndefinedOrEmpty(lastName)) parameters.push({ name: "LastName", dataType: SQLDataTypes.VARCHAR, value: `%${  lastName   }%`});
-  if (!helperMethods.isNullOrUndefinedOrEmpty(firstName)) parameters.push({ name: "FirstName", dataType: SQLDataTypes.VARCHAR, value: `%${  firstName   }%`});
-  if (!helperMethods.isNullOrUndefinedOrEmpty(middleName)) parameters.push({ name: "MiddleName", dataType: SQLDataTypes.VARCHAR, value: `%${  middleName   }%`});
+  if (departmentID !== "0")
+    parameters.push({
+      name: "DepartmentID",
+      dataType: SQLDataTypes.VARCHAR,
+      value: departmentID,
+    });
+  if (!helperMethods.isNullOrUndefinedOrEmpty(employeeCode))
+    parameters.push({
+      name: "EmployeeCode",
+      dataType: SQLDataTypes.VARCHAR,
+      value: employeeCode,
+    });
+  if (!helperMethods.isNullOrUndefinedOrEmpty(lastName))
+    parameters.push({
+      name: "LastName",
+      dataType: SQLDataTypes.VARCHAR,
+      value: `%${lastName}%`,
+    });
+  if (!helperMethods.isNullOrUndefinedOrEmpty(firstName))
+    parameters.push({
+      name: "FirstName",
+      dataType: SQLDataTypes.VARCHAR,
+      value: `%${firstName}%`,
+    });
+  if (!helperMethods.isNullOrUndefinedOrEmpty(middleName))
+    parameters.push({
+      name: "MiddleName",
+      dataType: SQLDataTypes.VARCHAR,
+      value: `%${middleName}%`,
+    });
   return (await helperMethods.executeQuery(query, parameters)).recordset;
 }
-
 
 async function getEmployeeDependents(employeeID) {
   const query = `				  
@@ -233,15 +267,15 @@ async function getEmployeeDependents(employeeID) {
 							       FROM @tbl
             `;
 
-    const parameters = [
-      { name: "EmployeeCode", dataType: SQLDataTypes.VARCHAR, value: employeeID }
-    ];
-  
+  const parameters = [
+    { name: "EmployeeCode", dataType: SQLDataTypes.VARCHAR, value: employeeID },
+  ];
+
   return (await helperMethods.executeQuery(query, parameters)).recordset;
 }
 
 module.exports = {
   getAllDepartments,
   getEmployees,
-  getEmployeeDependents
-}
+  getEmployeeDependents,
+};

@@ -21,39 +21,57 @@ const getTestOrders = async function (req, res) {
 
   const returnValue = await sqlHelper.transact(async (txn) => {
     try {
-      const { deptCode, fromDate, toDate, processing } = req.query;
+      const { deptCode, fromDate, toDate, dateFilter, processing } = req.query;
       let conditions = "";
       let args = [];
-
-      let testOrders = {};
+      let testOrders = [];
+      let orderCondition = {};
       if (deptCode) {
-        if (processing) {
-          conditions = `and convert(date, t0.DateTimeCreated) between ? and ?
-            and t.DepartmentCode = ?`;
-          args = [fromDate, toDate, deptCode];
+        // if (processing) {
+        //   conditions = `and convert(date, t0w.dateTimeUpdated) between ? and ?
+        //     and t.DepartmentCode = ?`;
+        //   args = [fromDate, toDate, deptCode];
+        //   orderCondition = {
+        //     order: "c.patientType, t0w.dateTimeUpdated asc",
+        //     top: "",
+        //   };
+        // } else {
+        //   conditions = `
+        // and convert(date, cm.CHARGEDATETIME) between ? and ?
+        // and t.DepartmentCode = ?`;
+        //   args = [fromDate, toDate, deptCode];
 
-          testOrders = await testOrderModel.selectTestOrders(
+        //   orderCondition = {
+        //     order: "c.patientType, cm.chargeDateTime asc",
+        //     top: "",
+        //   };
+        // }
+
+        conditions = `
+            and convert(date, ${dateFilter}) between ? and ?
+            and t.DepartmentCode = ?`;
+        // conditions = `
+        //     and ${dateFilter} >= ? and ${dateFilter} <= ?
+        //     and t.DepartmentCode = ?`;
+        args = [fromDate, toDate, deptCode];
+        orderCondition = {
+          order: `c.patientType, ${dateFilter} asc`,
+          top: "",
+          processing: processing,
+        };
+
+        if (processing) {
+          testOrders = await testOrderModel.selectTestOrderProcessing(
             conditions,
             args,
-            {
-              order: "t0.dateTimeCreated asc",
-              top: "",
-            },
+            orderCondition,
             txn,
           );
         } else {
-          conditions = `
-        and convert(date, cm.CHARGEDATETIME) between ? and ?
-        and t.DepartmentCode = ?`;
-          args = [fromDate, toDate, deptCode];
-
-          testOrders = await testOrderModel.selectCharges(
+          testOrders = await testOrderModel.selectTestOrders(
             conditions,
             args,
-            {
-              order: "cm.chargeDateTime asc",
-              top: "",
-            },
+            orderCondition,
             txn,
           );
         }

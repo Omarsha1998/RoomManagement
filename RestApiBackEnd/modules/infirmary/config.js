@@ -1,6 +1,6 @@
 module.exports = {
   appName: "UE Infirmary",
-  appCode: "UEINFIRMARY",
+  appCode: "UEINFRMYAPE",
   appClientUrl: process.env.DEV
     ? "http://10.107.0.24:9000/infirmary"
     : "https://local.uerm.edu.ph/infirmary",

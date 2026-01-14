@@ -29,11 +29,13 @@ const login = async (req, res) => {
       const userToken = {
         token: generatedToken,
       };
+
       const redisClient = createClient();
       await redisClient.connect();
       await redisClient.set(user.employee_id, generatedToken);
       return res.json(userToken);
     }
+
     return res.status(401).json("Incorrect Employee ID and/or Password");
   } catch (error) {
     return res

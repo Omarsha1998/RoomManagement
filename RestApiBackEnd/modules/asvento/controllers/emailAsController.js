@@ -49,11 +49,11 @@ const sendTestSms = async function (req, res) {
         app: "SMS - SENDER",
         text: " test text",
       };
-      console.log(smsMessage);
+      // console.log(smsMessage);
       const tokenBearerSMS = await util.getTokenSMS();
       const accessToken = tokenBearerSMS.accessToken;
       const smsStatus = await tools.sendSMSInsertDB(accessToken, smsMessage);
-      console.log(smsStatus);
+      // console.log(smsStatus);
       return res.json({ success: true });
     } catch (error) {
       console.log(error);

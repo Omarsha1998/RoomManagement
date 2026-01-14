@@ -11,5 +11,6 @@ router.post("/app-registration", emailController.sendAppRegistration);
 router.post("/forget-password", emailController.sendForgotPassword);
 router.post("/send-dynamic-email", emailController.sendDynamicEmail);
 router.post("/send-dynamic-sms", emailController.sendDynamicSMS);
+router.post("/send-fluid-email", emailController.sendFluidEmail);
 
 module.exports = router;

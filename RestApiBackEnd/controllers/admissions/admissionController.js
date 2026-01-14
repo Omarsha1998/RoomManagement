@@ -473,8 +473,9 @@ const getCollegeDeclarations = async function (req, res) {
 const getRequirements = async function (req, res) {
   const returnValue = await sqlHelper.transact(async (txn) => {
     try {
-      const conditions = "and active = ?";
-      const args = [1];
+      const conditions = "";
+      // and active = 1
+      const args = [];
 
       return await configsModel.selectRequirements(
         conditions,
@@ -722,8 +723,14 @@ const getStudentDocuments = async function (req, res) {
       let args = [];
 
       if (req.query.referenceNumber) {
-        conditions = "and ref_number = ? and active = ?  and college = ?";
-        args = [req.query.referenceNumber, 1, req.query.college];
+        conditions =
+          "and ref_number = ? and active = ?  and college = ? and semester = ?";
+        args = [
+          req.query.referenceNumber,
+          1,
+          req.query.college,
+          req.query.semester,
+        ];
       }
 
       if (req.query.documentFile) {
@@ -2723,6 +2730,8 @@ const tagApplicationInfo = async function (req, res) {
       const applicationInfo = req.body.applicationInfo;
       const admissionDetails = req.body.admissionDetails;
 
+      // console.log(admissionDetails);
+
       if (applicationInfo.application_status === "FOR ACCEPTANCE") {
         applicationInfo.forAcceptanceDate = await util.currentDateTime();
         applicationInfo.forAcceptanceBy = await util.currentUserToken(req).code;
@@ -2731,78 +2740,81 @@ const tagApplicationInfo = async function (req, res) {
         applicationInfo.receiveDate = await util.currentDateTime();
         applicationInfo.receivedBy = await util.currentUserToken(req).code;
       } else if (applicationInfo.application_status === "FOR INTERVIEW") {
-        /* REFER TO LEVEL 2 INTERVIEWER */
-        const level2Interviewer = await interviewerModel.selectInterviewers(
-          "and interviewerLevel = 2 and (college = ? or secondaryCollege = ?)",
-          [admissionDetails.course, admissionDetails.course],
-          {
-            order: "fullName asc",
-            top: "",
-          },
-          txn,
-        );
+        if (admissionDetails.course !== "APMD") {
+          /* REFER TO LEVEL 2 INTERVIEWER */
+          const level2Interviewer = await interviewerModel.selectInterviewers(
+            "and interviewerLevel = 2 and (college = ? or secondaryCollege = ?)",
+            [admissionDetails.course, admissionDetails.course],
+            {
+              order: "fullName asc",
+              top: "",
+            },
+            txn,
+          );
 
-        const interviewerLevel2 = level2Interviewer[0];
-        const appointmentCode = await sqlHelper.generateUniqueCode(
-          "UERMOnlineAdmission..ApplicantAppointments",
-          `${admissionDetails.college}`,
-          2,
-          txn,
-        );
+          const interviewerLevel2 = level2Interviewer[0];
+          const appointmentCode = await sqlHelper.generateUniqueCode(
+            "UERMOnlineAdmission..ApplicantAppointments",
+            `${admissionDetails.college}`,
+            2,
+            txn,
+          );
 
-        const payload = {
-          code: appointmentCode,
-          referenceNumber: admissionDetails.refNumber,
-          applicationNumber: admissionDetails.appNumber,
-          interviewerId: interviewerLevel2.code,
-          status: 3,
-        };
+          const payload = {
+            code: appointmentCode,
+            referenceNumber: admissionDetails.refNumber,
+            applicationNumber: admissionDetails.appNumber,
+            interviewerId: interviewerLevel2.code,
+            status: 3,
+          };
 
-        const appointments = await interviewerModel.selectApplicantAppointments(
-          "and referenceNumber = ?",
-          [payload.referenceNumber],
-          {},
-          txn,
-        );
+          const appointments =
+            await interviewerModel.selectApplicantAppointments(
+              "and referenceNumber = ?",
+              [payload.referenceNumber],
+              {},
+              txn,
+            );
 
-        if (appointments.length === 0) {
-          await interviewerModel.insertApplicantAppointments(payload, txn);
+          if (appointments.length === 0) {
+            await interviewerModel.insertApplicantAppointments(payload, txn);
 
-          const tokenBearerSMS = await util.getTokenSMS();
-          const accessToken = tokenBearerSMS.accessToken;
-          const level2SMS = {
-            messageType: "sms",
-            destination: interviewerLevel2.mobileNumber, // LIVE DATA
-            // destination: "09053254071", // TEST DATA
-            app: "UERM STUDENT ADMISSION",
-            text: `UERM ADMISSIONS ADVISORY\n
+            const tokenBearerSMS = await util.getTokenSMS();
+            const accessToken = tokenBearerSMS.accessToken;
+            const level2SMS = {
+              messageType: "sms",
+              destination: interviewerLevel2.mobileNumber, // LIVE DATA
+              // destination: "09053254071", // TEST DATA
+              app: "UERM STUDENT ADMISSION",
+              text: `UERM ADMISSIONS ADVISORY\n
       One of our applicants is forwarded to you for further evaluation.\n
       Please check your UERM Student Admission Interviewer Module and provide a feedback within three working days.`,
-          };
-          await tools.sendSMSInsertDB(accessToken, level2SMS);
+            };
+            await tools.sendSMSInsertDB(accessToken, level2SMS);
 
-          const referredEmail = {
-            header: "UERM ADMISSIONS ADVISORY",
-            subject: "UERM ADMISSIONS ADVISORY",
-            content: `The application of <strong>${interviewerLevel2.fullName}</strong> is forwarded to the Office of the Dean for further evaluation.
+            const referredEmail = {
+              header: "UERM ADMISSIONS ADVISORY",
+              subject: "UERM ADMISSIONS ADVISORY",
+              content: `The application of <strong>${interviewerLevel2.fullName}</strong> is forwarded to the Office of the Dean for further evaluation.
                                   <br><br>
                                   Please check your UERM Student Admission Interviewer Module and provide a feedback on the said application within three working days upon receipt of this e-mail notification.
                                   <br><br>
                                   Otherwise, the above-named applicant will be scheduled for an interview to the next degree program of choice. `,
-            email: interviewerLevel2.email, // LIVE DATA
-            // email: "btgresola@uerm.edu.ph", // TEST DATA
-            name: interviewerLevel2.fullName,
-          };
+              email: interviewerLevel2.email, // LIVE DATA
+              // email: "btgresola@uerm.edu.ph", // TEST DATA
+              name: interviewerLevel2.fullName,
+            };
 
-          await util.sendEmail(referredEmail);
-          /* REFER TO LEVEL 2 INTERVIEWER */
+            await util.sendEmail(referredEmail);
+            /* REFER TO LEVEL 2 INTERVIEWER */
+          }
+
+          applicationInfo.received = 1;
+          applicationInfo.receiveDate = await util.currentDateTime();
+          applicationInfo.receivedBy = await util.currentUserToken(req).code;
+          applicationInfo.forInterviewDate = await util.currentDateTime();
+          applicationInfo.code = await util.currentUserToken(req).code;
         }
-
-        applicationInfo.received = 1;
-        applicationInfo.receiveDate = await util.currentDateTime();
-        applicationInfo.receivedBy = await util.currentUserToken(req).code;
-        applicationInfo.forInterviewDate = await util.currentDateTime();
-        applicationInfo.code = await util.currentUserToken(req).code;
       }
 
       const applicants = await applicantsModel.updateApplicantsInfo(
@@ -2880,6 +2892,8 @@ const putApplicationStatus = async function (req, res) {
       );
 
       if (updateAppInfo.error === undefined) {
+        const tokenBearerSMS = await util.getTokenSMS();
+        const accessToken = tokenBearerSMS.accessToken;
         if (req.body.statusDetails.appStatus === "ACCEPTED") {
           const smsMessage = {
             messageType: "sms",
@@ -2887,8 +2901,6 @@ const putApplicationStatus = async function (req, res) {
             app: "UERM STUDENT ADMISSION",
             text: notifications.sms,
           };
-          const tokenBearerSMS = await util.getTokenSMS();
-          const accessToken = tokenBearerSMS.accessToken;
           await tools.sendSMSInsertDB(accessToken, smsMessage);
           const emailContent = {
             header: "UERM Student Admission",
@@ -2905,8 +2917,6 @@ const putApplicationStatus = async function (req, res) {
             app: "UERM STUDENT ADMISSION",
             text: notifications.sms,
           };
-          const tokenBearerSMS = await util.getTokenSMS();
-          const accessToken = tokenBearerSMS.accessToken;
           await tools.sendSMSInsertDB(accessToken, smsMessage);
           const emailContent = {
             header: "UERM Student Admission",
@@ -2939,6 +2949,24 @@ const putApplicationStatus = async function (req, res) {
             },
             txn,
           );
+        } else if (req.body.statusDetails.appStatus === "RECEIVED") {
+          if (req.body.admissionDetails.course === "APMD") {
+            const smsMessage = {
+              messageType: "sms",
+              destination: admissionDetails.mobileNumber,
+              app: "UERM STUDENT ADMISSION",
+              text: notifications.sms,
+            };
+            await tools.sendSMSInsertDB(accessToken, smsMessage);
+            const emailContent = {
+              header: "UERM Student Admission",
+              subject: "UERM Student Admission - Update",
+              content: `${notifications.email}`,
+              email: admissionDetails.email,
+              name: `${admissionDetails.fullName}`,
+            };
+            await util.sendEmail(emailContent);
+          }
         }
       }
 
@@ -2947,6 +2975,8 @@ const putApplicationStatus = async function (req, res) {
       console.log(error);
       return { error: error };
     }
+
+    // return true;
   });
 
   if (returnValue.error !== undefined) {

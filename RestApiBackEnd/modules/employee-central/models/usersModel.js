@@ -13,28 +13,29 @@ async function getDetails(condition) {
     await sqlHelper.query(
       `
       SELECT
-        TRIM(E.EmployeeCode) AS 'employee_id',
+        TRIM(E.CODE) AS 'employee_id',
         TRIM(U.[PASSWORD]) AS 'password',
         TRIM(E.LastName + ', ' + E.FirstName + ' ' + E.MiddleName + '. ' + E.ExtName) AS 'employee_full_name',
-        E.PositionCode,
-        E.Officer,
+        E.POS_CODE position,
+        E.IS_OFFICER,
         CASE
-          WHEN (SELECT COUNT(RecNo) FROM HR..EmpWorkExp AS W WHERE W.Deleted = 0 AND W.EmployeeCode = E.EmployeeCode) > 0 THEN 1
+          WHEN (SELECT COUNT(RecNo) FROM HR..EmpWorkExp AS W WHERE W.Deleted = 0 AND W.EmployeeCode = E.CODE) > 0 THEN 1
           ELSE 0
         END AS 'has_work_experience',
         CASE
-          WHEN (SELECT COUNT(RecNo) FROM [UE database]..License AS L WHERE L.Deleted = 0 AND L.PrcLicense = 1 AND L.deleted = 0 AND L.EmployeeCode = E.EmployeeCode) > 0 THEN 1
+          WHEN (SELECT COUNT(RecNo) FROM [UE database]..License AS L WHERE L.Deleted = 0 AND L.PrcLicense = 1 AND L.deleted = 0 AND L.EmployeeCode = E.CODE) > 0 THEN 1
           ELSE 0
         END AS 'is_license',
         CASE
-          WHEN D.DeptCode = '5040' THEN 1
+          WHEN E.DEPT_CODE = '5040' THEN 1
           ELSE 0
         END AS 'isHR',
-        TRIM(E.DeptCode) AS 'department_code'
-      FROM [UE database]..Employee AS E
-      INNER JOIN ITMgt..Users U ON U.CODE = E.EmployeeCode
-      LEFT JOIN [UE database]..Department D ON E.DeptCode = D.DeptCode
-      WHERE E.EmployeeCode = ?
+        TRIM(E.DEPT_CODE) AS 'department_code',
+        e.DEPT_DESC deptDescription,
+        e.POS_DESC posDescription
+      FROM [UE database]..vw_Employees AS E
+      INNER JOIN ITMgt..Users U ON U.CODE = E.CODE
+      WHERE E.CODE = ?
       `,
       [condition],
     )
@@ -105,6 +106,16 @@ async function generateAccessRights(employeeId) {
       module: "Approver Details",
       app: "Employee Portal",
     },
+    {
+      key: "eventAccess",
+      module: "Input",
+      app: "Calendar Event",
+    },
+    {
+      key: "unpaidOvertime",
+      module: "Unpaid Overtime Report",
+      app: "Employee Portal",
+    },
   ];
 
   const access_rights = {};
@@ -126,7 +137,9 @@ async function getToken(userData) {
       userData.has_work_experience,
     ),
     deptCode: userData.department_code,
+    deptDescription: userData.deptDescription,
     position: userData.positionCode,
+    posDescription: userData.posDescription,
     isOfficer: userData.officer,
     is_license: helperMethods.convertToBoolean(userData.is_license),
     access_rights: await generateAccessRights(userData.employee_id),

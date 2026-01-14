@@ -23,6 +23,8 @@ module.exports = {
     user: process.env.DB_USER_ECLAIMS,
     password: process.env.DB_PASS_ECLAIMS,
     ...baseConfig,
+    // Don't set port when connecting to named instance
+    port: 14330,
   },
   dev: {
     server: process.env.DB_HOST_ECLAIMS_DEV,
@@ -30,5 +32,7 @@ module.exports = {
     user: process.env.DB_USER_ECLAIMS_DEV,
     password: process.env.DB_PASS_ECLAIMS_DEV,
     ...baseConfig,
+    // Don't set port when connecting to named instance
+    port: 1433,
   },
 };

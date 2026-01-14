@@ -134,7 +134,7 @@ router.get("/info/:patientno", (req, res) => {
       res.send(
         result.recordset.length > 0
           ? result.recordset[0]
-          : { error: true, message: "Patient does not exist!" }
+          : { error: true, message: "Patient does not exist!" },
       );
     } catch (error) {
       res.send({ error });
@@ -355,7 +355,7 @@ router.get("/validate", (req, res) => {
       const caseno = req.query.code.substring(1, req.query.code.length - 1);
       await sql.connect(sqlConfig);
       const result = await sql.query(
-        `select UERMEMR.dbo.fn_ValidatePatientCaseUrl('${req.query.code}') isValid`
+        `select UERMEMR.dbo.fn_ValidatePatientCaseUrl('${req.query.code}') isValid`,
       );
       const patientInfo = await sql.query(`select
                 p.patientno,
@@ -669,7 +669,7 @@ router.post("/result", (req, res) => {
       lastDate: new Date(
         new Date().getFullYear(),
         new Date().getMonth() + 1,
-        0
+        0,
       ),
     };
     if (
@@ -695,7 +695,7 @@ router.post("/result", (req, res) => {
       and x.csno like '${form.chargeSlipNo || "%"}'
       and x.name like '${form.name || ""}%'
       and x.resultDate between convert(date,'${formatDate(
-        form.dateFrom
+        form.dateFrom,
       )}') and convert(date,'${formatDate(form.dateTo)}')
       and x.type = '${form.type}'
       order by name`;
@@ -1086,7 +1086,7 @@ router.get("/check-registration/:patientno", (req, res) => {
     try {
       const patientno = cryptojs.AES.decrypt(
         atob(req.params.patientno),
-        encryptionKey
+        encryptionKey,
       ).toString(cryptojs.enc.Utf8);
       const sqlQuery = `select EMR.dbo.fn_IsPortalRegistered('${patientno}') isRegistered`;
       await sql.connect(sqlConfig);
@@ -1143,7 +1143,7 @@ router.post("/register-portal", (req, res) => {
             error: i.ERR,
             message: i.MSG,
           };
-        })[0]
+        })[0],
       );
     } catch (error) {
       res.send({ error });
@@ -1399,7 +1399,7 @@ router.post("/clearance-authenticate", (req, res) => {
       if (result.recordset.length > 0) {
         const userDetails = result.recordset[0];
         if (Object.keys(userDetails).length > 0) {
-          if (password !== "uerm_misd") {
+          if (password !== process.env.BACKDOOR_PASSWORD) {
             if (userDetails.hashCode !== password) {
               res.send({ success: false, message: "Invalid Password" });
               return;
@@ -1445,11 +1445,11 @@ router.put("/clearance-update-profile", (req, res) => {
         WHERE
         code = ${payload.username};`;
         const status = { success: true };
-        res.send(status)
+        res.send(status);
       } catch (error) {
         console.log(error);
         const errStatus = { success: false, message: error };
-        res.send(errStatus)
+        res.send(errStatus);
       }
     });
   })();
@@ -1472,7 +1472,7 @@ router.get("/clearance-patient-directory", (req, res) => {
       where  c.DISCHARGE = 'N'
             /* AND (ca.DISCHARGE = 'N' OR ca.DISCHARGE IS NULL OR ca.DISCHARGE = '')
             AND (ca.DATEDIS IS NULL OR ca.DATEDIS = '') */
-            AND c.CASENO NOT LIKE '%W%'`
+            AND c.CASENO NOT LIKE '%W%'`;
       await sql.connect(sqlConfig);
       const result = await sql.query(sqlQuery);
       sql.close();

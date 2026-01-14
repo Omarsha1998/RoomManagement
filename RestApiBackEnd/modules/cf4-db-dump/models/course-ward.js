@@ -19,7 +19,7 @@ for (const column of columns) {
 
 const columnsMap = buildHashTable(columns, "name");
 
-const insert = async (userCode, consultationId, item, txn) => {
+const upsert = async (userCode, consultationId, item, txn) => {
   const identityColumnsMap = {
     consultationId,
     dateAction: item.dateAction,
@@ -45,31 +45,27 @@ module.exports = {
   columns,
   columnsMap,
   format: (val) => {
-    if (!val) return [];
-    if (!Array.isArray(val) || val.length === 0) return [];
+    if (!val) {
+      return [];
+    }
 
-    const codesMap = {
-      Date: "dateAction",
-      "Doctor's Order": "doctorsAction",
-    };
+    if (!Array.isArray(val) || val.length === 0) {
+      return [];
+    }
 
-    return val.map((el) => {
-      return el.reduce((obj, currVal) => {
-        obj[codesMap[currVal.code]] = currVal.value.toUpperCase();
-        return obj;
+    return val.map((e) => {
+      return e.reduce((a, v) => {
+        if (v.code === "Date") {
+          a.dateAction = new Date(v.value);
+        }
+
+        if (v.code === "Doctor's Order") {
+          a.doctorsAction = v.value.toUpperCase();
+        }
+
+        return a;
       }, {});
     });
   },
-  // format: (val) => {
-  //   if (!val) return [];
-  //   if (!Array.isArray(val) || val.length === 0) return [];
-
-  //   return val.map((el) => {
-  //     return {
-  //       dateAction: el.dateAction,
-  //       doctorsAction: el.doctorsAction?.toUpperCase(),
-  //     };
-  //   });
-  // },
-  insert,
+  upsert,
 };

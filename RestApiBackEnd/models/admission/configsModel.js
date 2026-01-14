@@ -195,7 +195,8 @@ const selectCollegeDeclarations = async function (
       dateTimeCreated,
       dateTimeUpdated,
       reservationFee,
-      enrollmentPeriod
+      enrollmentPeriod,
+      interviewDates
     from UERMOnlineAdmission..CollegeDeclarations
     WHERE 1=1 ${conditions}
     ${util.empty(options.order) ? "" : `order by ${options.order}`}

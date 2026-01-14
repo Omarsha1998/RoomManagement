@@ -7,7 +7,7 @@ const selectItems = async function (conditions, txn, options) {
     `SELECT
         ${util.empty(options.top) ? "" : `TOP(${options.top})`}
         code newItemCode,
-        itemCode,
+        a.itemCode,
         brandName,
         mg,
         genName,
@@ -18,7 +18,7 @@ const selectItems = async function (conditions, txn, options) {
         phicGroupCode,
         isGeneral,
         discontinue
-      FROM UERMMMC..PHAR_ITEMS
+      FROM UERMMMC..PHAR_ITEMS a
       WHERE 1=1  ${conditions}
       ${util.empty(options.order) ? "" : `order by ${options.order}`}
       `,
@@ -163,8 +163,12 @@ const selectReorderItems = async function (conditions, args, txn, options) {
 
   if (reorderPointItems.length > 0) {
     for (const list of reorderPointItems) {
-      list.brandName = list.description;
-      list.genName = "";
+      list.categoryDesc =
+        list.categoryDesc === null ? "NO CATEGORY" : list.categoryDesc;
+      list.subCategoryDesc =
+        list.subCategoryDesc === null ? "NO CATEGORY" : list.subCategoryDesc;
+      // list.brandName = list.description;
+      // list.genName = list.genName;
       list.dosageForm = list.uOM;
       list.itemCode = list.itemcode;
       list.code = list.itemcode;
@@ -174,7 +178,7 @@ const selectReorderItems = async function (conditions, args, txn, options) {
       list.itemDescription = "";
     }
   }
-
+  // console.log(reorderPointItems);
   return reorderPointItems;
 };
 
@@ -216,6 +220,7 @@ const selectSubcategories = async function (conditions, args, txn, options) {
         categoryCode,
         name,
         description,
+        groupTitle,
         active,
         createdBy,
         updatedBy,
@@ -249,7 +254,7 @@ const selectSubcategories = async function (conditions, args, txn, options) {
 };
 
 const selectItemStockRooms = async function (conditions, args, txn, options) {
-  const subCategories = await sqlHelper.query(
+  const itemStocks = await sqlHelper.query(
     `SELECT
         ${util.empty(options.top) ? "" : `TOP(${options.top})`}
         id,
@@ -266,8 +271,8 @@ const selectItemStockRooms = async function (conditions, args, txn, options) {
     txn,
   );
 
-  if (subCategories.length > 0) {
-    for (const list of subCategories) {
+  if (itemStocks.length > 0) {
+    for (const list of itemStocks) {
       list.dateTimeCreated = util.formatDate2({
         date: list.dateTimeCreated,
         withDayNameWithTime: true,
@@ -280,7 +285,53 @@ const selectItemStockRooms = async function (conditions, args, txn, options) {
     }
   }
 
-  return subCategories;
+  return itemStocks;
+};
+
+const selectItemExceptions = async function (conditions, args, txn, options) {
+  const itemStocks = await sqlHelper.query(
+    `SELECT
+        ${util.empty(options.top) ? "" : `TOP(${options.top})`}
+        a.id,
+        b.code newItemCode,
+        a.itemCode,
+        a.departmentCode,
+		    b.brandName,
+        b.mg,
+        b.genName,
+        b.dosageForm,
+        b.ucost,
+        b.unitPricePerPc,
+        b.phicCatCode,
+        b.phicGroupCode,
+        b.isGeneral,
+        b.discontinue,
+        a.active,
+        1 as 'narcotics'
+      FROM UERMINV..ItemExceptions a
+	    join UERMMMC..Phar_Items b on b.itemCode = a.itemCode collate LATIN1_GENERAL_CI_AS
+      WHERE 1=1 ${conditions}
+      ${util.empty(options.order) ? "" : `order by ${options.order}`}
+      `,
+    args,
+    txn,
+  );
+
+  if (itemStocks.length > 0) {
+    for (const list of itemStocks) {
+      list.dateTimeCreated = util.formatDate2({
+        date: list.dateTimeCreated,
+        withDayNameWithTime: true,
+      });
+
+      list.dateTimeUpdated = util.formatDate2({
+        date: list.dateTimeUpdated,
+        withDayNameWithTime: true,
+      });
+    }
+  }
+
+  return itemStocks;
 };
 
 const insertDepartmentItems = async function (payload, txn) {
@@ -338,6 +389,7 @@ module.exports = {
   selectCategories,
   selectSubcategories,
   selectItemStockRooms,
+  selectItemExceptions,
   updateItems,
   selectDepartmentItems,
   insertDepartmentItems,

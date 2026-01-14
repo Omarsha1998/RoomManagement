@@ -1,7 +1,7 @@
 const { Router } = require("express");
 const patientCasesController = require("../controllers/patientCasesController");
 
-const { validateAccessToken } = require("../../../helpers/crypto");
+// const { validateAccessToken } = require("../../../helpers/crypto");
 
 const router = Router();
 

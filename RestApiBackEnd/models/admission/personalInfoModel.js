@@ -146,6 +146,7 @@ const getApplicantPersonalInfo = async function (
       philhealthMemberRegistration,
       philhealthNumber,
       otherVaccination,
+      specialNeeds,
       allowExceptionAdmission,
       fatherEducationalAttainment,
       motherEducationalAttainment,

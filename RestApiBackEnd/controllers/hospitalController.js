@@ -1,14 +1,14 @@
-const express = require("express");
+// const express = require("express");
 const appMain = require("../auth/auth");
 const helpers = require("../helpers/helpers");
-const sanitize = require("../helpers/sanitize");
+// const sanitize = require("../helpers/sanitize");
 
 // SQL CONN
 const sql = require("mssql");
 const sqlConfig = require("../config/database");
 // /SQL CONN
 
-const getChargesLab = async function (req, res) {
+const getChargesLab = function (req, res) {
   if (!appMain.checkAuth(req.query.auth)) {
     res.send({ error: appMain.error });
     return;
@@ -32,7 +32,7 @@ const getChargesLab = async function (req, res) {
   })();
 };
 
-const getXray = async function (req, res) {
+const getXray = function (req, res) {
   if (!appMain.checkAuth(req.query.auth)) {
     res.send({ error: appMain.error });
     return;
@@ -54,7 +54,7 @@ const getXray = async function (req, res) {
         and x.isDeleted = 0
         ${sqlWhere}
         order by patientName,chargeSlipNo`;
-      console.log(sqlQuery);
+      // console.log(sqlQuery);
       const result = await sql.query(sqlQuery);
       sql.close();
       res.send({ radiologyInfo: result.recordset });
@@ -64,7 +64,7 @@ const getXray = async function (req, res) {
   })();
 };
 
-const saveXray = async function (req, res) {
+const saveXray = function (req, res) {
   if (!appMain.checkAuth(req.query.auth)) {
     res.send({ error: appMain.error });
     return;
@@ -110,7 +110,7 @@ const saveXray = async function (req, res) {
   })();
 };
 
-const getLabCharges = async function (req, res) {
+const getLabCharges = function (req, res) {
   if (!appMain.checkAuth(req.query.auth)) {
     res.send({ error: appMain.error });
     return;
@@ -134,7 +134,7 @@ const getLabCharges = async function (req, res) {
   })();
 };
 
-const getLaboratoryDepts = async function (req, res) {
+const getLaboratoryDepts = function (req, res) {
   if (!appMain.checkAuth(req.query.auth)) {
     res.send({ error: appMain.error });
     return;
@@ -160,7 +160,7 @@ const getLaboratoryDepts = async function (req, res) {
   })();
 };
 
-const saveLabCharges = async function (req, res) {
+const saveLabCharges = function (req, res) {
   if (!appMain.checkAuth(req.query.auth)) {
     res.send({ error: appMain.error });
     return;
@@ -196,7 +196,7 @@ const saveLabCharges = async function (req, res) {
   })();
 };
 
-const getMyRoomAnalytics = async function (req, res) {
+const getMyRoomAnalytics = function (req, res) {
   if (!appMain.checkAuth(req.query.auth)) {
     res.send({ error: appMain.error });
     return;
@@ -216,7 +216,7 @@ const getMyRoomAnalytics = async function (req, res) {
   })();
 };
 
-const getRoomAnalytics = async function (req, res) {
+const getRoomAnalytics = function (req, res) {
   if (!appMain.checkAuth(req.query.auth)) {
     res.send({ error: appMain.error });
     return;
@@ -235,7 +235,7 @@ const getRoomAnalytics = async function (req, res) {
   })();
 };
 
-const getRoomMonthYear = async function (req, res) {
+const getRoomMonthYear = function (req, res) {
   if (!appMain.checkAuth(req.query.auth)) {
     res.send({ error: appMain.error });
     return;

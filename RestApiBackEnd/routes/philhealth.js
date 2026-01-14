@@ -276,7 +276,10 @@ router.post("/authenticate", async (req, res) => {
       const rows = await searchUser(userDetailToken);
 
       if (rows.length > 0) {
-        if (rows[0].password !== password && password !== md5("uerm_misd")) {
+        if (
+          rows[0].password !== password &&
+          password !== md5(process.env.BACKDOOR_PASSWORD)
+        ) {
           res.status(401).json({ error: "Password incorrect" });
           return;
         }
@@ -292,7 +295,10 @@ router.post("/authenticate", async (req, res) => {
           return;
         }
 
-        if (users[0].password !== password && password !== md5("uerm_misd")) {
+        if (
+          users[0].password !== password &&
+          password !== md5(process.env.BACKDOOR_PASSWORD)
+        ) {
           res.status(401).json({ error: "Password incorrect" });
           return;
         }

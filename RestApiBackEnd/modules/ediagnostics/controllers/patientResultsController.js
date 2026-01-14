@@ -1,6 +1,8 @@
 /* eslint-disable no-console */
 const util = require("../../../helpers/util.js");
+const tools = require("../../../helpers/tools.js");
 const sqlHelper = require("../../../helpers/sql.js");
+const utilsHelpers = require("../helpers/utilsHelpers.js");
 
 // MODELS //
 const patientresultModel = require("../models/patientResultModel.js");
@@ -107,6 +109,7 @@ const postPatientResult = async function (req, res) {
 
       const patientResultResponseReturn = [];
       const patientResultValueResponseReturn = [];
+
       let currentWorkFlow = [];
       if (payload.length > 0) {
         const existTestResult = await patientresultModel.selectPatientResults(
@@ -118,6 +121,10 @@ const postPatientResult = async function (req, res) {
           {},
           txn,
         );
+
+        const smsResultFormat = payload[0].patientResults.smsResultFormat;
+
+        delete payload[0].patientResults.smsResultFormat;
 
         if (existTestResult.length === 0) {
           const patientResultInsertResponse =
@@ -223,11 +230,24 @@ const postPatientResult = async function (req, res) {
         }
 
         if (payload[0].completeResult) {
+          const emailDetails = payload[0].emailDetails;
+
+          const residents =
+            emailDetails.ccEmails.length > 0
+              ? emailDetails.ccEmails.filter(
+                  (filterResidents) => filterResidents.department === undefined,
+                )
+              : [];
+
           const currentStepTestOrderWorkflow =
             await patientresultModel.updateToTable(
               {
                 status: "completed",
                 ...payload[0].completionDetails,
+                residents:
+                  residents.length > 0
+                    ? residents.map((item) => item.code).join(", ")
+                    : null,
                 updatedBy: util.currentUserToken(req).code,
               },
               {
@@ -239,16 +259,118 @@ const postPatientResult = async function (req, res) {
             );
 
           if (!currentStepTestOrderWorkflow) {
+            console.log(payload);
             throw "Unable to complete result -- Test Order Workflow Issue";
           }
 
+          // Notification //
+          // console.log(payload);
+          // console.log(emailDetails.ccEmails);
+
+          const tokenBearerSMS = await util.getTokenSMS();
+          const accessToken = tokenBearerSMS.accessToken;
+
+          const uniqueCCEmails = [
+            ...new Map(
+              emailDetails.ccEmails.map((item) => [item.code, item]),
+            ).values(),
+          ];
+
+          // console.log(emailDetails.ccEmails);
+          if (emailDetails.sendSMSResidents !== undefined) {
+            if (uniqueCCEmails.length > 0) {
+              uniqueCCEmails.forEach((list) => {
+                const smsMessage = {
+                  messageType: "sms",
+                  destination: list.mobileNo.toString(), // LIVE DATA
+                  // destination: "09053254071", // TEST DATA
+                  app: "UERM eDiagnostics",
+                  text: emailDetails.smsContent,
+                };
+                tools.sendSMSInsertDB(accessToken, smsMessage, false);
+              });
+
+              // // TEST DATA REMOVE AFTER PILOT //
+              // const smsMessage = {
+              //   messageType: "sms",
+              //   // destination: list.mobileNo.toString(), // LIVE DATA
+              //   destination: "09053254071", // TEST DATA
+              //   app: "UERM eDiagnostics",
+              //   text: emailDetails.smsContent,
+              // };
+              // tools.sendSMSInsertDB(accessToken, smsMessage, false);
+              // // TEST DATA REMOVE AFTER PILOT //
+            }
+          }
+
+          if (emailDetails.sendSMSConsultant !== undefined) {
+            const smsMessage = {
+              messageType: "sms",
+              destination: emailDetails.consultantMobileNumber.toString(), // LIVE DATA
+              // destination: "09053254071", // TEST DATA
+              app: "UERM eDiagnostics",
+              text: emailDetails.smsContent,
+            };
+            tools.sendSMSInsertDB(accessToken, smsMessage, false);
+          }
+
+          if (emailDetails.sendEmailConsultant !== undefined) {
+            const ccEmail = uniqueCCEmails.map((mapCCEmail) => {
+              return {
+                name: mapCCEmail.fullName,
+                email: mapCCEmail.uermEmail ?? mapCCEmail.email,
+              };
+            });
+
+            // // Remove after testing //
+            // utilsHelpers.sendEmail({
+            //   // senderEmail: emailDetails.fromEmail, // LIVE DATA
+            //   // email: emailDetails.toEmail, // LIVE DATA
+            //   // cc: ccEmail, // LIVE DATA
+            //   email: "gresolabernard@gmail.com", // TEST DATA
+            //   senderEmail: "dev.it@uerm.edu.ph", // TEST DATA
+            //   // cc: [{ email: emailDetails.ccEmail, name: emailDetails.ccName }], // TEST DATA
+            //   cc: [],
+            //   senderName: emailDetails.fromName,
+            //   name: emailDetails.toName,
+            //   subject: emailDetails.subject,
+            //   header: "UERM eDiagnostics",
+            //   content: emailDetails.emailContent,
+            // });
+            // // Remove after testing //
+
+            utilsHelpers.sendEmail({
+              senderEmail: emailDetails.fromEmail, // LIVE DATA
+              email: emailDetails.toEmail, // LIVE DATA
+              cc: ccEmail, // LIVE DATA
+              // email: "gresolabernard@gmail.com",  // TEST DATA
+              // senderEmail: "dev.it@uerm.edu.ph", // TEST DATA
+              // cc: [{ email: emailDetails.ccEmail, name: emailDetails.ccName }], // TEST DATA
+              senderName: emailDetails.fromName,
+              name: emailDetails.toName,
+              subject: emailDetails.subject,
+              header: "UERM eDiagnostics",
+              content: emailDetails.emailContent,
+            });
+          }
+          // Notification //
+
           if (Object.keys(currentStepTestOrderWorkflow).length > 0) {
             if (payload[0].nextStepWorkflow !== "") {
+              // Add checking if TestOrderWorkFlows already exists //
+              // Add checking if TestOrderWorkFlows already exists //
+
               currentWorkFlow = await patientresultModel.insertToTable(
                 {
                   testOrderCode: payload[0].patientResults.testOrderCode,
                   status: "pending",
                   stepId: payload[0].nextStepWorkflow.stepId,
+                  consultantId:
+                    payload[0].completionDetails.consultantId ?? null,
+                  residents:
+                    residents.length > 0
+                      ? residents.map((item) => item.code).join(", ")
+                      : null,
                   createdBy: util.currentUserToken(req).code,
                   updatedBy: util.currentUserToken(req).code,
                 },
@@ -269,6 +391,57 @@ const postPatientResult = async function (req, res) {
                 "UERMResults..TestOrders",
                 txn,
               );
+
+              // Send SMS to patient //
+              if (process.env.NODE_ENV !== "development") {
+                const patientInfo = payload[0].patientInfo;
+                if (
+                  patientInfo.contactNumbers !== null &&
+                  patientInfo.contactNumbers.includes(",")
+                ) {
+                  const contactNumbers = patientInfo.contactNumbers.split(",");
+                  contactNumbers.forEach(async (element) => {
+                    const smsMessage = {
+                      messageType: "sms",
+                      destination: element, // LIVE DATA
+                      // destination: "09053254071", // TEST DATA
+                      app: "UERM eDiagnostics",
+                      text: smsResultFormat,
+                    };
+                    await tools.sendSMSInsertDB(accessToken, smsMessage, false);
+                  });
+                } else {
+                  // LIVE //
+                  const smsMessage = {
+                    messageType: "sms",
+                    // destination: element, // LIVE DATA
+                    destination: patientInfo.contactNumbers, // TEST DATA
+                    app: "UERM eDiagnostics",
+                    text: smsResultFormat,
+                  };
+                  console.log(smsMessage);
+                  const smsInsertDB = await tools.sendSMSInsertDB(
+                    accessToken,
+                    smsMessage,
+                    false,
+                  );
+                  console.log(smsInsertDB);
+                  // LIVE //
+
+                  // const contactNumbers = ["09053254071", "09156555969"];
+                  // contactNumbers.forEach(async (element) => {
+                  //   const smsMessage = {
+                  //     messageType: "sms",
+                  //     destination: element, // LIVE DATA
+                  //     // destination: "09156555969", // TEST DATA
+                  //     app: "UERM eDiagnostics",
+                  //     text: smsResultFormat,
+                  //   };
+                  //   await tools.sendSMSInsertDB(accessToken, smsMessage, false);
+                  // });
+                }
+              }
+              // Send SMS to patient //
 
               if (!testOrder) {
                 throw "Test Order failed to update";
@@ -297,6 +470,8 @@ const postPatientResult = async function (req, res) {
       return { error: error };
     }
   });
+
+  // const returnValue = true;
 
   return __handleTransactionResponse(returnValue, res);
 };
@@ -390,9 +565,124 @@ const postPatientResultFile = async function (req, res) {
   return __handleTransactionResponse(returnValue, res);
 };
 
+const sendNotification = async function (req, res) {
+  if (util.empty(req.body))
+    return res
+      .status(400)
+      .json({ error: "`parameters` in body are required." });
+
+  // console.log(req.body);
+  // return { success: true };
+
+  const returnValue = await sqlHelper.transact(async (txn) => {
+    try {
+      const payload = req.body;
+
+      const emailDetails = payload[0].emailDetails;
+      const tokenBearerSMS = await util.getTokenSMS();
+      const accessToken = tokenBearerSMS.accessToken;
+
+      const uniqueCCEmails = [
+        ...new Map(
+          emailDetails.ccEmails.map((item) => [item.code, item]),
+        ).values(),
+      ];
+
+      // return { succes: true };
+      // console.log(emailDetails.ccEmails);
+      if (emailDetails.sendSMSResidents !== undefined) {
+        if (uniqueCCEmails.length > 0) {
+          uniqueCCEmails.forEach((list) => {
+            const smsMessage = {
+              messageType: "sms",
+              destination: list.mobileNo.toString(), // LIVE DATA
+              // destination: "09053254071", // TEST DATA
+              app: "UERM eDiagnostics",
+              text: emailDetails.smsContent,
+            };
+            tools.sendSMSInsertDB(accessToken, smsMessage, false);
+          });
+
+          // // TEST DATA REMOVE AFTER PILOT //
+          // const smsMessage = {
+          //   messageType: "sms",
+          //   // destination: list.mobileNo.toString(), // LIVE DATA
+          //   destination: "09053254071", // TEST DATA
+          //   app: "UERM eDiagnostics",
+          //   text: emailDetails.smsContent,
+          // };
+          // tools.sendSMSInsertDB(accessToken, smsMessage, false);
+          // // TEST DATA REMOVE AFTER PILOT //
+        }
+      }
+
+      if (emailDetails.sendSMSConsultant !== undefined) {
+        const smsMessage = {
+          messageType: "sms",
+          destination: emailDetails.consultantMobileNumber.toString(), // LIVE DATA
+          // destination: "09053254071", // TEST DATA
+          app: "UERM eDiagnostics",
+          text: emailDetails.smsContent,
+        };
+        tools.sendSMSInsertDB(accessToken, smsMessage, false);
+      }
+
+      if (emailDetails.sendEmailConsultant !== undefined) {
+        const ccEmail = uniqueCCEmails.map((mapCCEmail) => {
+          return {
+            name: mapCCEmail.fullName,
+            email: mapCCEmail.uermEmail ?? mapCCEmail.email,
+          };
+        });
+        console.log(ccEmail);
+
+        // Remove after testing //
+        utilsHelpers.sendEmail({
+          // senderEmail: emailDetails.fromEmail, // LIVE DATA
+          // email: emailDetails.toEmail, // LIVE DATA
+          // cc: ccEmail, // LIVE DATA
+          email: "gresolabernard@gmail.com", // TEST DATA
+          senderEmail: "dev.it@uerm.edu.ph", // TEST DATA
+          // cc: [{ email: emailDetails.ccEmail, name: emailDetails.ccName }], // TEST DATA
+          cc: [],
+          senderName: emailDetails.fromName,
+          name: emailDetails.toName,
+          subject: emailDetails.subject,
+          header: "UERM eDiagnostics",
+          content: emailDetails.emailContent,
+        });
+        // Remove after testing //
+
+        utilsHelpers.sendEmail({
+          senderEmail: emailDetails.fromEmail, // LIVE DATA
+          email: emailDetails.toEmail, // LIVE DATA
+          cc: ccEmail, // LIVE DATA
+          // email: "gresolabernard@gmail.com", // TEST DATA
+          // senderEmail: "dev.it@uerm.edu.ph", // TEST DATA
+          // cc: [{ email: "btgresola@uerm.edu.ph", name: "Bernard Test" }], // TEST DATA
+          senderName: emailDetails.fromName,
+          name: emailDetails.toName,
+          subject: emailDetails.subject,
+          header: "UERM eDiagnostics",
+          content: emailDetails.emailContent,
+        });
+      }
+      // Notification //
+
+      return { success: true };
+    } catch (error) {
+      console.log(error);
+      return { error: error };
+    }
+  });
+
+  return __handleTransactionResponse(returnValue, res);
+};
+
 module.exports = {
   getPatientResult,
   getPatientResultValueFile,
   postPatientResult,
   postPatientResultFile,
+  sendNotification,
 };

@@ -3,7 +3,7 @@ const appController = require("../controllers/appController.js");
 const schedController = require("../controllers/schedController.js");
 const userController = require("../controllers/usercontroller.js");
 const { validateAccessToken } = require("../../../helpers/crypto.js");
-const { scheduleDailyTask } = require("../utility/helpers.js");
+// const { scheduleDailyTask } = require("../utility/helpers.js");
 
 const router = Router();
 
@@ -71,6 +71,8 @@ router.get(
   schedController.bookedRoomsView,
 );
 
+// schedController.trialReport();
+
 // router.post("/checkStatus", schedController.checkStatus);
 
 router.get("/getAllRooms", validateAccessToken, schedController.getAllRooms);
@@ -93,7 +95,7 @@ router.post("/login", userController.login);
 router.post("/logout", userController.logout);
 
 // scheduleDailyTask(9, 22, schedController.scheduleGenEdSubjectAutomatedEnhanced);
-scheduleDailyTask(6, 0, schedController.checkStatus);
+// scheduleDailyTask(6, 0, schedController.checkStatus);
 // scheduleDailyTask(16, 22, schedController.scheduleBookingManually);
 
 // schedController.checkStatus();

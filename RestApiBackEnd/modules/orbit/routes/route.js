@@ -4,8 +4,8 @@ const orPatientRecordsController = require("../controllers/orPatientRecordsContr
 
 // const accessRightsController = require("../controllers/accessRightsController");
 
-const accessRightsController = require("../../access-rights/controllers/accessRightsController"); // boiler temp access right
-// const accessRightsController = require("../controllers/accessRightsController"); //own access right
+// const accessRightsController = require("../../access-rights/controllers/accessRightsController"); // boiler temp access right
+const accessUserRole = require("../controllers/accessRightsController"); //own access right
 // const emailController = require("../controllers/emailAsController");
 
 const { validateAccessToken } = require("../../../helpers/crypto");
@@ -14,6 +14,17 @@ const { validateAccessToken } = require("../../../helpers/crypto");
 const router = Router();
 // router.get("/qr-test", emailController.generateTestQr);
 // ********************* GET ***************************
+
+router.get(
+  "/test-ehr-data",
+  validateAccessToken,
+  orPatientRecordsController.getActiveEhrCases,
+);
+// router.get(
+//   "/procedure-checker",
+//   validateAccessToken,
+//   orPatientRecordsController.checkProcedureExtinction,
+// );
 
 router.get(
   "/started-or",
@@ -26,11 +37,20 @@ router.get(
   orPatientRecordsController.getProcedures,
 );
 router.get(
+  "/get-optech-procedures-per-department",
+  validateAccessToken,
+  orPatientRecordsController.getProceduresPerDepartment,
+);
+router.get(
   "/encounter-exists",
   validateAccessToken,
   orPatientRecordsController.getEncounterdetails,
 );
-
+router.get(
+  "/encounter-exists-dashboard",
+  validateAccessToken,
+  orPatientRecordsController.getEncounterDashboard,
+);
 router.get(
   "/all-surgeons",
   validateAccessToken,
@@ -53,20 +73,38 @@ router.get(
   validateAccessToken,
   orPatientRecordsController.getPatientDetails,
 );
-try {
-  router.get(
-    "/patient-record-testing",
-    validateAccessToken,
-    orPatientRecordsController.getTestPdets,
-  );
-} catch (error) {
-  console.log("HERES ERROR", error);
-}
+
+router.get(
+  "/patient-record-testing",
+  validateAccessToken,
+  orPatientRecordsController.getTestPdets,
+);
+router.get(
+  "/encoded-procedure-for-maintenance",
+  validateAccessToken,
+  orPatientRecordsController.getProcedureMaintenance,
+);
+router.get(
+  "/patient-record-discah",
+  validateAccessToken,
+  orPatientRecordsController.getDischargeWithProcedures,
+);
+router.get(
+  "/cases-for-operatives",
+  validateAccessToken,
+  orPatientRecordsController.getCasesForOperatives,
+);
 
 router.get(
   "/patient-record-with-operatives",
   validateAccessToken,
   orPatientRecordsController.getWithOperativeOnly,
+);
+
+router.get(
+  "/active-procedures",
+  validateAccessToken,
+  orPatientRecordsController.getNoDuplicatesActiveProcedure,
 );
 
 router.get(
@@ -91,13 +129,26 @@ router.get(
   validateAccessToken,
   orPatientRecordsController.getSponges,
 );
-
+router.get(
+  "/analytics-count",
+  validateAccessToken,
+  orPatientRecordsController.getAnalytics,
+);
 router.get(
   "/orbit-signatories",
   validateAccessToken,
   orPatientRecordsController.getOrbitSignatories,
 );
-
+router.get(
+  "/surgs-teams-active",
+  validateAccessToken,
+  orPatientRecordsController.getActivePrimarySurgs,
+);
+router.get(
+  "/surgs-teams-active-assistant",
+  validateAccessToken,
+  orPatientRecordsController.getActiveAssistSurgs,
+);
 router.get(
   "/ue-anes",
   validateAccessToken,
@@ -131,6 +182,17 @@ router.get(
   orPatientRecordsController.getOrbitResidents,
 );
 router.get(
+  "/orbit-assistant-residents",
+  validateAccessToken,
+  orPatientRecordsController.getOrbitAssistantResidents,
+);
+router.get(
+  "/orbit-anesthe-residents",
+  validateAccessToken,
+  orPatientRecordsController.getOrbitAnesthesiologistResidents,
+);
+
+router.get(
   "/orbit-attending-nurse",
   validateAccessToken,
   orPatientRecordsController.getAttendingNurse,
@@ -162,10 +224,33 @@ router.put(
   orPatientRecordsController.putOpTechForms,
 );
 router.put(
+  "/it-support-optech",
+  validateAccessToken,
+  orPatientRecordsController.itMaintenanceUpdateOpTech,
+);
+
+router.put(
+  "/it-support-oprec",
+  validateAccessToken,
+  orPatientRecordsController.itMaintenanceUpdateOpRec,
+);
+router.put(
+  "/archive-procedure",
+  validateAccessToken,
+  orPatientRecordsController.toInactiveProcedure,
+);
+router.put(
   "/update-op-rescs-f",
   validateAccessToken,
   orPatientRecordsController.putOpRecForms,
 );
+
+//register
+// router.post(
+//   "/reg-new-proce",
+//   validateAccessToken,
+//   orPatientRecordsController.registerNewProcedure,
+// );
 
 // updateSponges
 
@@ -173,6 +258,15 @@ router.put(
 
 // ********************* POST ***************************
 
-router.get("/", validateAccessToken, accessRightsController.getAccessRights);
+// router.get("/", validateAccessToken, accessRightsController.getAccessRights);
+
+router.get("/orroles", validateAccessToken, accessUserRole.getRoles);
+
+router.post("/saving-to-redis", accessUserRole.saveToRedis);
+router.post(
+  "/inauthenticateOrbit",
+  validateAccessToken,
+  accessUserRole.removeToRedis,
+);
 
 module.exports = router;

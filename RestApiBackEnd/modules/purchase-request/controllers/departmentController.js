@@ -127,6 +127,33 @@ const getPRApprovers = async function (req, res) {
   return res.json(returnValue);
 };
 
+const getMedicineDepartments = async function (req, res) {
+  const returnValue = await sqlHelper.transact(async (txn) => {
+    try {
+      const args = [1];
+      const conditions = "and active = ?";
+
+      return await departments.selectMedicineDepartments(
+        conditions,
+        args,
+        {
+          top: {},
+          order: ``,
+        },
+        txn,
+      );
+    } catch (error) {
+      console.log(error);
+      return { error: error };
+    }
+  });
+
+  if (returnValue.error !== undefined) {
+    return res.status(500).json({ error: `${returnValue.error}` });
+  }
+  return res.json(returnValue);
+};
+
 const updatePRApprover = async function (req, res) {
   if (!req.body) return res.status(400).json({ error: "Invalid Parameters" });
   const returnValue = await sqlHelper.transact(async (txn) => {
@@ -191,6 +218,7 @@ module.exports = {
   getPRDepartmentsApprover,
   getPRApprovers,
   getPurchasingDepartments,
+  getMedicineDepartments,
   updatePRApprover,
   insertPRApprovers,
 };

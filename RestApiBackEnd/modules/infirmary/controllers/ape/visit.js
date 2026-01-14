@@ -2,30 +2,26 @@ const db = require("../../../../helpers/sql.js");
 const util = require("../../../../helpers/util.js");
 const { respond } = require("../../../../helpers/controller.js");
 
-const { sliceObj, match } = require("../../../../helpers/util.js");
-
-const { OK, BAD_REQUEST, NOT_FOUND, INTERNAL_SERVER_ERROR, FORBIDDEN } =
-  require("../../../../helpers/constants.js").httpResponseStatusCodes;
-
 const {
-  userRoleToExamsHandledMap,
-  USER_ROLES,
-  VISIT_ORDER_ACTIONS,
-} = require("../../constants.js");
+  sliceObj,
+  // match
+} = require("../../../../helpers/util.js");
+
+const { VISIT_ORDER_ACTIONS } = require("../../constants.js");
 
 const visitModel = require("../../models/ape/visit.js");
 const patientModel = require("../../models/ape/patient.js");
 
 const get = async (req, res) => {
   if (!req.query || Object.keys(req.query).length === 0) {
-    res.status(BAD_REQUEST.code).json("URL query is malfromed.");
+    res.status(400).json("URL query is malfromed.");
     return;
   }
 
   const whereStrArr = [];
   const whereArgs = [];
 
-  // if (req.user.roleCode === USER_ROLES.DR.code) {
+  // if (req.user.roleCode === "DR") {
   //   whereStrArr.push(
   //     `(NULLIF(v.PhysicianCode, '') IS NULL OR v.PhysicianCode = ?)`,
   //   );
@@ -118,6 +114,7 @@ const getVisitExams = async (req, res) => {
   const r = await db.query(
     `
       SELECT
+        ve.id,
         ve.visitId,
         ve.examCode,
         ve.createdBy,
@@ -170,6 +167,13 @@ const track = async (req, res) => {
 const schedule = async (req, res) => {
   if (!req.params || !req.params.patientCode) {
     res.status(400).json("`patientCode` in URL param is required.");
+    return;
+  }
+
+  if (["DR", "LAB", "RAD"].includes(req.user.roleCode)) {
+    res
+      .status(400)
+      .json("Physicians are not allowed to add patient attendance.");
     return;
   }
 
@@ -253,7 +257,7 @@ const acceptExam = async (req, res) => {
 
 const completeExam = async (req, res) => {
   if (!req.body || !req.body.identificationCode || !req.body.examCode) {
-    res.status(BAD_REQUEST.code).json("Request body is malformed.");
+    res.status(400).json("Request body is malformed.");
     return;
   }
 
@@ -303,7 +307,7 @@ const completeExam = async (req, res) => {
 
 const getExamDetails = async (req, res) => {
   if (!req.query || !req.query.visitId || !req.query.examCode) {
-    res.status(BAD_REQUEST.code).json("URL query is malformed.");
+    res.status(400).json("URL query is malformed.");
     return;
   }
 
@@ -346,7 +350,7 @@ const getExamDetails = async (req, res) => {
       };
     }
 
-    if (!userRoleToExamsHandledMap[req.user.roleCode].includes(examCode)) {
+    if (!req.user.examsHandled.includes(examCode)) {
       return {
         status: 403,
         body: "You are not allowed to access this information.",
@@ -407,9 +411,10 @@ const saveExamDetails = async (req, res) => {
     !req.body ||
     !req.body.examCode ||
     !req.body.details ||
-    !Array.isArray(req.body.details)
+    !Array.isArray(req.body.details) ||
+    req.body.details.length === 0
   ) {
-    res.status(BAD_REQUEST.code).json("Request body is malformed.");
+    res.status(400).json("Request body is malformed.");
     return;
   }
 
@@ -446,7 +451,7 @@ const saveExamDetails = async (req, res) => {
 
 const saveExamDetailsRaw = async (req, res) => {
   if (!req.body) {
-    res.status(BAD_REQUEST.code).json("Request body is malformed.");
+    res.status(400).json("Request body is malformed.");
     return;
   }
 
@@ -511,7 +516,6 @@ const saveExamDetailsRaw = async (req, res) => {
         txn,
       );
       if (filterSolicited.length > 0) {
-        const user = { code: "SYSTEM", roleCode: "ADMIN" };
         const filterWithMapping = filterSolicited.filter(
           (filterWithMapping) => filterWithMapping.code !== null,
         );
@@ -534,7 +538,11 @@ const saveExamDetailsRaw = async (req, res) => {
           respond(
             res,
             await visitModel.upsertExamDetails(
-              user,
+              {
+                code: "SYSTEM",
+                roleCode: "ADMIN",
+                examsHandled: ["LAB_CBC", "LAB_URI", "LAB_FCL"],
+              },
               null,
               solicitedResults.visitId,
               null,
@@ -605,7 +613,7 @@ const getOne = async (req, res) => {
               physician: {
                 code: r[0].physicianCode,
                 name: r[0].physicianName,
-                roleCode: USER_ROLES.DR.code,
+                roleCode: "DR",
               },
             }
           : {}),

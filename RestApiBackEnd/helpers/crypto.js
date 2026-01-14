@@ -54,6 +54,11 @@ const validateLogin = async (req, res, next) => {
   const user = verifyAccessToken(token, true);
 
   if (!user) {
+    res.clearCookie("access_token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "dev" ? false : true,
+      sameSite: "Strict",
+    });
     return res.status(401).json({
       error: "Access token is invalid or expired.",
       tokenError: true,
@@ -71,6 +76,11 @@ const validateLogin = async (req, res, next) => {
     const whiteListedToken = await redis.getConn().get(userCode);
 
     if (whiteListedToken !== token) {
+      res.clearCookie("access_token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "dev" ? false : true,
+        sameSite: "Strict",
+      });
       return res.status(401).json({
         error: "Access token is not whitelisted.",
         tokenError: true,

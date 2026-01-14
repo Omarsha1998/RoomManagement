@@ -4,12 +4,15 @@ const { buildHashTable } = require("../../../helpers/util.js");
 const tableName = "EasyClaimsOffline..pePert";
 
 const getNumberPart = (val) => {
-  return Number(
-    val
-      ?.toString()
-      ?.match(/[0-9]*\.?[0-9]+/)
-      ?.at(0) ?? 0,
-  );
+  if (typeof val === "number") {
+    return val;
+  }
+
+  if (typeof val === "string") {
+    return Number((val.match(/[-+]?\d*\.?\d+/g) || [])[0] || 0);
+  }
+
+  return 0;
 };
 
 const columns = [
@@ -45,25 +48,19 @@ const columns = [
     name: "hr",
     required: true,
     source: "physicalExaminationOnAdmissionVitalSignsHR",
-    // format: (val) => {
-    //   return getNumberPart(val);
-    // },
+    format: getNumberPart,
   },
   {
     name: "rr",
     required: true,
     source: "physicalExaminationOnAdmissionVitalSignsRR",
-    // format: (val) => {
-    //   return getNumberPart(val);
-    // },
+    format: getNumberPart,
   },
   {
     name: "temp",
     required: true,
     source: "physicalExaminationOnAdmissionVitalSignsTemp",
-    // format: (val) => {
-    //   return getNumberPart(val);
-    // },
+    format: getNumberPart,
   },
   {
     name: "height",
@@ -77,9 +74,7 @@ const columns = [
     name: "weight",
     default: null,
     source: "physicalExaminationOnAdmissionWeight",
-    format: (val) => {
-      return getNumberPart(val);
-    },
+    format: getNumberPart,
   },
   {
     name: "vision",
@@ -105,7 +100,7 @@ for (const column of columns) {
 
 const columnsMap = buildHashTable(columns, "name");
 
-const insert = async (userCode, consultationId, item, txn) => {
+const upsert = async (userCode, consultationId, item, txn) => {
   const row = db.createRow(item, columns);
 
   return await db.upsert(
@@ -125,5 +120,5 @@ module.exports = {
   table: tableName,
   columns,
   columnsMap,
-  insert,
+  upsert,
 };

@@ -495,6 +495,31 @@ const processVerificationLevels = (resultLevel) => {
 //     return res.status(500).json({ error: "Failed to insert leave request" });
 //   }
 // };
+const dateHelper = (data) => {
+  const today = new Date();
+
+  return data.map((item) => {
+    const from = new Date(item.tIME_FROM);
+    const to = new Date(item.tIME_TO);
+
+    item.tIME_FROM = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      from.getHours(),
+      from.getMinutes(),
+    );
+    item.tIME_TO = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      to.getHours(),
+      to.getMinutes(),
+    );
+
+    return item;
+  });
+};
 
 const processHrdRequest = async (data, hrdAccount, hrModule, oneLevel) => {
   const currentYear = new Date().getFullYear();
@@ -1354,7 +1379,7 @@ const getPendingLeaves = async (req, res) => {
     }
   }
 
-  const result = await Leave.getPendingLeavesByEmployee(
+  let result = await Leave.getPendingLeavesByEmployee(
     employeeCodesLevel1,
     employeeCodesLevel2,
     lvl1DeptCodes,
@@ -1365,14 +1390,18 @@ const getPendingLeaves = async (req, res) => {
   );
 
   if (result) {
-    result.map((row) => {
-      // const dateFromStr = row.dateLeavedFrom.toISOString().substring(0, 10);
-      // const dateToStr = row.dateLeavedTo.toISOString().substring(0, 10);
-      // row.tIME_FROM = `${dateFromStr}T${row.tIME_FROM.toISOString().substring(11, 23)}Z`;
-      // row.tIME_TO = `${dateToStr}T${row.tIME_TO.toISOString().substring(11, 23)}Z`;
-      row.timeFrom = util.formatDate({ date: row.tIME_FROM, timeOnly: true });
-      row.timeTo = util.formatDate({ date: row.tIME_TO, timeOnly: true });
-    });
+    // result.map((row) => {
+    //   // const dateFromStr = row.dateLeavedFrom.toISOString().substring(0, 10);
+    //   // const dateToStr = row.dateLeavedTo.toISOString().substring(0, 10);
+    //   // row.tIME_FROM = `${dateFromStr}T${row.tIME_FROM.toISOString().substring(11, 23)}Z`;
+    //   // row.tIME_TO = `${dateToStr}T${row.tIME_TO.toISOString().substring(11, 23)}Z`;
+    //   row.timeFrom = new Date(row.tIME_FROM);
+    //   row.timeTo = new Date(row.tIME_TO);
+
+    //   return row;
+    // });
+
+    result = dateHelper(result);
 
     return res.status(200).json(result);
   } else {
@@ -1393,15 +1422,26 @@ const getRejectedLeaves = async (req, res) => {
       "DateLeavedFrom IS NOT NULL",
       "DateLeavedTo IS NOT NULL",
       "(rejectedByLevel1 IS NOT NULL OR rejectedByLevel2 IS NOT NULL)",
+      "LI.DateLeavedFrom >= DATEADD(YEAR, -3, GETDATE())",
     ];
     const args2 = ["RejectedByLevel1", "RejectedByLevel2"];
 
-    const rejectedLeaves = await Leave.getRejectedLeaves(
+    let rejectedLeaves = await Leave.getRejectedLeaves(
       sqlWhereStrArr,
       args,
       sqlWhereStrArr2,
       args2,
     );
+
+    if (rejectedLeaves) {
+      // rejectedLeaves.map((item) => {
+      //   item.tIME_FROM = new Date(item.tIME_FROM);
+      //   item.tIME_TO = new Date(item.tIME_TO);
+      //   return item;
+      // });
+      rejectedLeaves = dateHelper(rejectedLeaves);
+    }
+
     res.status(200).json(rejectedLeaves);
   } catch (error) {
     res.status(500).json({ error: "Failed to retrieve rejected leave" });
@@ -1421,15 +1461,20 @@ const getApprovedLeaves = async (req, res) => {
       "DateLeavedTo IS NOT NULL",
       "approvedByLevel1 IS NOT NULL",
       "approvedByLevel2 IS NOT NULL",
+      "LI.DateLeavedFrom >= DATEADD(YEAR, -3, GETDATE())",
     ];
     const args2 = ["Approved"];
 
-    const approvedLeave = await Leave.getApprovedLeaves(
+    let approvedLeave = await Leave.getApprovedLeaves(
       sqlWhereStrArr,
       args,
       sqlWhereStrArr2,
       args2,
     );
+
+    if (approvedLeave) {
+      approvedLeave = dateHelper(approvedLeave);
+    }
 
     res.status(200).json(approvedLeave);
   } catch (error) {
@@ -2037,7 +2082,7 @@ const cancelPending = async (req, res) => {
       success = success.map((row) => {
         row.timeFrom = util.formatDate({ date: row.tIME_FROM, timeOnly: true });
         row.timeTo = util.formatDate({ date: row.tIME_TO, timeOnly: true });
-        return row; // this makes map return the updated array
+        return row;
       });
       res.status(200).json(success);
     } else {
@@ -2290,15 +2335,21 @@ const getRejectedCancelLeaves = async (req, res) => {
       "DateLeavedFrom IS NOT NULL",
       "DateLeavedTo IS NOT NULL",
       "(cancelRejectedByLevel1 IS NOT NULL OR cancelRejectedByLevel2 IS NOT NULL)",
+      "LI.DateLeavedFrom >= DATEADD(YEAR, -3, GETDATE())",
     ];
     const args2 = ["RejectedByLevel1", "RejectedByLevel2"];
 
-    const rejectedLeaves = await Leave.getRejectedCancelLeaves(
+    let rejectedLeaves = await Leave.getRejectedCancelLeaves(
       sqlWhereStrArr,
       args,
       sqlWhereStrArr2,
       args2,
     );
+
+    if (rejectedLeaves) {
+      rejectedLeaves = dateHelper(rejectedLeaves);
+    }
+
     res.status(200).json(rejectedLeaves);
   } catch (error) {
     res.status(500).json({ error: "Failed to retrieve rejected leave" });
@@ -2318,15 +2369,21 @@ const getApprovedCancelLeaves = async (req, res) => {
       "DateLeavedTo IS NOT NULL",
       "cancelledByLevel1 IS NOT NULL",
       "cancelledByLevel2 IS NOT NULL",
+      "LI.DateLeavedFrom >= DATEADD(YEAR, -3, GETDATE())",
     ];
     const args2 = ["Approved"];
 
-    const approvedLeave = await Leave.getApprovedCancelLeaves(
+    let approvedLeave = await Leave.getApprovedCancelLeaves(
       sqlWhereStrArr,
       args,
       sqlWhereStrArr2,
       args2,
     );
+
+    if (approvedLeave) {
+      approvedLeave = dateHelper(approvedLeave);
+    }
+
     res.status(200).json(approvedLeave);
   } catch (error) {
     res.status(500).json({ error: "Failed to retrieve approved leave" });
@@ -2336,13 +2393,17 @@ const getApprovedCancelLeaves = async (req, res) => {
 const getUserApprovedLeaves = async (req, res) => {
   try {
     const employeeId = req.user.employee_id;
-    const sqlWhereStrArr = ["v.approvedByLevel1 = ? OR v.approvedByLevel2 = ?"];
+    const sqlWhereStrArr = [
+      "(v.approvedByLevel1 = ? OR v.approvedByLevel2 = ?) AND v.DateLeavedFrom >= DATEADD(YEAR, -3, GETDATE())",
+    ];
     const args = [employeeId, employeeId];
 
-    const userApproved = await Leave.getUserApprovedLeaves(
-      sqlWhereStrArr,
-      args,
-    );
+    let userApproved = await Leave.getUserApprovedLeaves(sqlWhereStrArr, args);
+
+    if (userApproved) {
+      userApproved = dateHelper(userApproved);
+    }
+
     return res.status(200).json(userApproved);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
@@ -2352,13 +2413,16 @@ const getUserApprovedLeaves = async (req, res) => {
 const getUserRejectedLeaves = async (req, res) => {
   try {
     const employeeId = req.user.employee_id;
-    const sqlWhereStrArr = ["v.rejectedByLevel1 = ? OR v.rejectedByLevel2 = ?"];
+    const sqlWhereStrArr = [
+      "(v.rejectedByLevel1 = ? OR v.rejectedByLevel2 = ?) AND v.DateLeavedFrom >= DATEADD(YEAR, -3, GETDATE())",
+    ];
     const args = [employeeId, employeeId];
 
-    const userRejected = await Leave.getUserRejectedLeaves(
-      sqlWhereStrArr,
-      args,
-    );
+    let userRejected = await Leave.getUserRejectedLeaves(sqlWhereStrArr, args);
+
+    if (userRejected) {
+      userRejected = dateHelper(userRejected);
+    }
     return res.status(200).json(userRejected);
   } catch (error) {
     res.status(500).json({ error: "Internal server error" });
@@ -2369,13 +2433,17 @@ const getCancelApprovedLeave = async (req, res) => {
   try {
     const employeeId = req.user.employee_id;
     const sqlWhereStrArr = [
-      "v.cancelledByLevel1 = ? OR v.cancelledByLevel2 = ?",
+      "(v.cancelledByLevel1 = ? OR v.cancelledByLevel2 = ?) AND v.DateLeavedFrom >= DATEADD(YEAR, -3, GETDATE())",
     ];
     const args = [employeeId, employeeId];
-    const userCancelApproved = await Leave.getUserCancelApprovedLeaves(
+    let userCancelApproved = await Leave.getUserCancelApprovedLeaves(
       sqlWhereStrArr,
       args,
     );
+
+    if (userCancelApproved) {
+      userCancelApproved = dateHelper(userCancelApproved);
+    }
 
     return res.status(200).json(userCancelApproved);
   } catch (error) {
@@ -2387,13 +2455,17 @@ const getCancelRejectedLeave = async (req, res) => {
   try {
     const employeeId = req.user.employee_id;
     const sqlWhereStrArr = [
-      "v.cancelRejectedByLevel1 = ? OR v.cancelRejectedByLevel2 = ?",
+      "(v.cancelRejectedByLevel1 = ? OR v.cancelRejectedByLevel2 = ?) AND v.DateLeavedFrom >= DATEADD(YEAR, -3, GETDATE())",
     ];
     const args = [employeeId, employeeId];
-    const userCancelRejected = await Leave.getUserCancelRejectedLeaves(
+    let userCancelRejected = await Leave.getUserCancelRejectedLeaves(
       sqlWhereStrArr,
       args,
     );
+
+    if (userCancelRejected) {
+      userCancelRejected = dateHelper(userCancelRejected);
+    }
 
     return res.status(200).json(userCancelRejected);
   } catch (error) {
@@ -2645,16 +2717,24 @@ const getActiveEmployees = async (req, res) => {
   if (!result) return res.status(500).json(null);
 
   let hrEmployeeCodes = [];
-  if (hrApprover && hrApprover.length > 0 && hrApprover[0].employeeCodes) {
-    hrEmployeeCodes = hrApprover[0].employeeCodes
-      .split(",")
-      .map((code) => code.trim());
+  if (hrApprover && hrApprover.length > 0) {
+    hrEmployeeCodes = hrApprover.flatMap((approver) => {
+      if (approver.employeeCodes) {
+        return approver.employeeCodes
+          .split(",")
+          .map((code) => code.trim())
+          .filter((code) => code);
+      }
+      return [];
+    });
   }
 
   const exclusionList = [...hrEmployeeCodes, approverCode];
 
   const filteredResult = result.filter(
-    (employee) => !exclusionList.includes(employee.employeeCode),
+    (employee) =>
+      employee.employeeCode !== approverCode &&
+      !exclusionList?.includes(employee.employeeCode),
   );
 
   return res.status(200).json(filteredResult);

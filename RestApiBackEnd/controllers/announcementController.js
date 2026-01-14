@@ -1,20 +1,20 @@
 const express = require("express");
 const router = express.Router();
 const sanitize = require("../helpers/sanitize");
-const helpers = require("../helpers/helpers");
-const formidable = require("formidable");
-const path = require("path");
-const fs = require("fs");
-const md5 = require("md5");
-const bcrypt = require("bcrypt");
-const redis = require("redis");
+// const helpers = require("../helpers/helpers");
+// const formidable = require("formidable");
+// const path = require("path");
+// const fs = require("fs");
+// const md5 = require("md5");
+// const bcrypt = require("bcrypt");
+// const redis = require("redis");
 // SQL CONN
 const sql = require("mssql");
 const sqlConfig = require("../config/database");
 // /SQL CONN
 router.use(sanitize);
 
-const getAnnouncements = async function (req, res) {
+const getAnnouncements = function (req, res) {
   let sqlWhere = "";
 
   if (req.query.app) {
@@ -55,10 +55,10 @@ const getAnnouncements = async function (req, res) {
   })();
 };
 
-const getAcknowledgement = async function (req, res) {
-  var sqlWhere = "";
+const getAcknowledgement = function (req, res) {
+  let sqlWhere = "";
   if (req.query.announcementId) {
-    var sqlWhere = `where announcementId = '${req.query.announcementId}' and employeeId = '${req.query.employeeId}'`;
+    sqlWhere = `where announcementId = '${req.query.announcementId}' and employeeId = '${req.query.employeeId}'`;
   }
   void (async function () {
     try {
@@ -82,7 +82,7 @@ const getAcknowledgement = async function (req, res) {
   })();
 };
 
-const acknowledgeAnnouncement = async function (req, res) {
+const acknowledgeAnnouncement = function (req, res) {
   if (!req.body.id) {
     res.send({ error: "Announcement ID Required." });
     return;

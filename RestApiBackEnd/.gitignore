@@ -2,9 +2,8 @@
 /keys
 /scholarship-bills
 /modules/employee-central/uploaded
-/.env
-
-
+/modules/orbit/orbitDebugKeys
+/modules/orbit/FAQ
 *.pdf
 *.logs
 *.log

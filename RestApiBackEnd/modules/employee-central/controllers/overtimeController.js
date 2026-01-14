@@ -185,6 +185,7 @@ const getPendingOvertime = async (req, res) => {
 
 const processOvertime = async (
   data,
+  approvedWorkHours,
   employeeCode,
   cancelModule = false,
   lvl1,
@@ -198,6 +199,7 @@ const processOvertime = async (
   const statusValue = cancelModule ? "CANCELLED" : "PendingAccomplishment";
 
   const updateFields = {
+    ApprovedHours: parseFloat(approvedWorkHours).toFixed(2),
     Status: statusValue,
     [approvedByLevel2Field]: employeeCode,
   };
@@ -225,13 +227,15 @@ const processOvertime = async (
 };
 
 const handleOvertimeApproval = async (
-  overtimeId,
+  data,
   employeeCode,
   Status,
   reason,
   cancelModule = false,
 ) => {
   const arrayOfMessages = [];
+
+  const { overtimeId, workHours } = data;
 
   const checkOvertimeStatus = await overtimeModel.checkLevelStatus(
     overtimeId,
@@ -295,6 +299,7 @@ const handleOvertimeApproval = async (
             await overtimeModel.getOvertimeIdDetails(overtimeId);
           resultArray = await processOvertime(
             overtimeDetails[0],
+            workHours,
             employeeCode,
             cancelModule,
             true,
@@ -302,6 +307,7 @@ const handleOvertimeApproval = async (
         } else {
           resultArray = await overtimeModel.updateOvertimeAction(
             {
+              ApprovedHours: parseFloat(workHours).toFixed(2),
               Status: mappedStatus.PendingLevel2,
               [approvedByLevel1Field]: employeeCode,
             },
@@ -354,6 +360,7 @@ const handleOvertimeApproval = async (
           await overtimeModel.getOvertimeIdDetails(overtimeId);
         return await processOvertime(
           overtimeDetails[0],
+          workHours,
           employeeCode,
           cancelModule,
         );
@@ -387,14 +394,15 @@ const handleOvertimeApproval = async (
 
 const updateOvertimeAction = async (req, res) => {
   const employeeCode = req.user.employee_id;
-  const OvertimeIds = req.body.OvertimeIds;
+  const datas = req.body.data;
   const Status = req.body.Status;
+
   const reason = req.body.reason || "";
   const arrayOfMessages = [];
 
-  for (const overtimeId of OvertimeIds) {
+  for (const data of datas) {
     const result = await handleOvertimeApproval(
-      overtimeId,
+      data,
       employeeCode,
       Status,
       reason,
@@ -599,8 +607,15 @@ const getPendingHrd = async (req, res) => {
 };
 
 const approveRejectHrdReview = async (req, res) => {
-  const hrdCode = req.user.employee_id;
+  const hrdCode = req.user?.employee_id;
   const { data, payrollPeriod, status, reason } = req.body;
+
+  if (!hrdCode || !Array.isArray(data) || data.length === 0) {
+    return res.status(400).json({
+      body: "Invalid request: missing HRD code or overtime data",
+    });
+  }
+
   const arrayResult = [];
 
   for (const overtime of data) {
@@ -615,92 +630,249 @@ const approveRejectHrdReview = async (req, res) => {
       oTType,
     } = overtime;
 
-    const processOvertime = await sqlHelper.transact(async (txn) => {
-      if (status === "Approved") {
-        const updateNewOvertimeStatus =
-          await overtimeModel.updateOvertimeAction(
-            {
-              Status: "Approved",
-              HrdProcessBy: hrdCode,
-              PayrollPeriod: payrollPeriod,
-              ApprovedHours: filedHours,
-              OTType: oTType,
-            },
-            { OtId: otId },
-            txn,
-            "HrdProcessDate",
-          );
+    if (!otId || !employeeCode) {
+      return res.status(400).json({
+        body: "Invalid overtime entry: missing required fields",
+      });
+    }
 
-        const insertIntoOldOvertimeTable =
-          await overtimeModel.insertIntoOldOvertime(
+    const processOvertime = await sqlHelper
+      .transact(async (txn) => {
+        if (status === "Approved") {
+          const updateNewOvertimeStatus =
+            await overtimeModel.updateOvertimeAction(
+              {
+                Status: "Approved",
+                HrdProcessBy: hrdCode,
+                PayrollPeriod: payrollPeriod,
+                ApprovedHours: filedHours,
+                OTType: oTType,
+              },
+              { OtId: otId },
+              txn,
+              "HrdProcessDate",
+            );
+
+          const insertIntoOldOvertimeTable =
+            await overtimeModel.insertIntoOldOvertime(
+              {
+                CODE: employeeCode,
+                DATE_OF_LEAVE: formatedDateOvertime,
+                HOURS: filedHours,
+                WORK: workLoad,
+                USERID: employeeCode,
+                APPROVED: 1,
+                TIME_FROM: timeFrom,
+                TIME_TO: timeTo,
+                "[APPROVE DATE]": adjustTime(
+                  updateNewOvertimeStatus.approvedByLevel2DateTime,
+                ),
+                "[APPROVE BY]": updateNewOvertimeStatus.approvedByLevel2,
+                forPayment: 1,
+                payrollPeriod: payrollPeriod,
+              },
+              txn,
+              "DATE",
+            );
+
+          const updateNewOvertimeOtOldId =
+            await overtimeModel.updateOvertimeAction(
+              {
+                OldOtId: insertIntoOldOvertimeTable.iD,
+              },
+              { OtId: otId },
+              txn,
+              "HrdProcessDate",
+            );
+
+          await overtimeModel.insertIntoAllowedOvertime(
             {
               CODE: employeeCode,
-              DATE_OF_LEAVE: formatedDateOvertime,
-              HOURS: filedHours,
-              WORK: workLoad,
-              USERID: employeeCode,
-              APPROVED: 1,
-              TIME_FROM: timeFrom,
-              TIME_TO: timeTo,
-              "[APPROVE DATE]": adjustTime(
-                updateNewOvertimeStatus.approvedByLevel2DateTime,
-              ),
-              "[APPROVE BY]": updateNewOvertimeStatus.approvedByLevel2,
-              forPayment: 1,
-              payrollPeriod: payrollPeriod,
+              "[OT ID]": updateNewOvertimeOtOldId.oldOtId,
+              "[ALLOW BY]": updateNewOvertimeOtOldId.accomplishedApprovedBy,
+              CANCELLED: 0,
+              "[HEAD APPROVED]": 0,
+              TRANSMITTAL: updateNewOvertimeOtOldId.workLoad,
+              "[TRANSMITTAL DATE]":
+                updateNewOvertimeOtOldId.accomplishedDateTime,
+              FINAL: 1,
+              "[FINAL BY]": updateNewOvertimeOtOldId.hrdProcessBy,
+              "[FINAL DATE]": updateNewOvertimeOtOldId.hrdProcessDate,
+              HOURS: updateNewOvertimeOtOldId.approvedHours,
+              "[HEAD ALLOWED]": 1,
             },
             txn,
-            "DATE",
+            "[ALLOW DATE]",
           );
 
-        const updateNewOvertimeOtOldId =
-          await overtimeModel.updateOvertimeAction(
+          return overtimeModel.insertIntoSummary(
             {
-              OldOtId: insertIntoOldOvertimeTable.iD,
+              otId: updateNewOvertimeOtOldId.oldOtId,
+              hours: updateNewOvertimeOtOldId.approvedHours,
+              type: updateNewOvertimeOtOldId.oTType,
+              payrollPeriod: updateNewOvertimeOtOldId.payrollPeriod,
+            },
+            txn,
+            "createDate",
+          );
+        } else if (status === "Rejected") {
+          return overtimeModel.updateOvertimeAction(
+            {
+              Status: "RejectedByHrd",
+              RejectedBy: hrdCode,
+              RejectedReason: reason || "No reason provided",
             },
             { OtId: otId },
             txn,
-            "HrdProcessDate",
+            "RejectedDateTime",
           );
-
-        const insertIntoOTSummary = await overtimeModel.insertIntoSummary(
-          {
-            otId: updateNewOvertimeOtOldId.oldOtId,
-            hours: updateNewOvertimeOtOldId.approvedHours,
-            type: updateNewOvertimeOtOldId.oTType,
-            payrollPeriod: updateNewOvertimeOtOldId.payrollPeriod,
-          },
-          txn,
-          "createDate",
-        );
-
-        return insertIntoOTSummary;
-      } else {
-        return await overtimeModel.updateOvertimeAction(
-          {
-            Status: "RejectedByHrd",
-            RejectedBy: hrdCode,
-            RejectedReason: reason,
-          },
-          { OtId: otId },
-          txn,
-          "RejectedDateTime",
-        );
-      }
-    });
+        } else {
+          return Promise.reject(new Error(`Invalid status: ${status}`));
+        }
+      })
+      .catch((err) => {
+        console.error(`Error processing overtime ${otId}:`, err);
+        return { error: true, message: err.message, otId };
+      });
 
     arrayResult.push(processOvertime);
   }
 
-  if (arrayResult.length === 0)
-    res.status(500).json({
-      body: "Error in approving / rejecting the overtime process by hrd",
+  if (arrayResult.some((res) => res?.error)) {
+    return res.status(500).json({
+      body: "Overtime HRD Review Approve/Reject Failed",
     });
+  }
 
-  res
-    .status(200)
-    .json({ body: "Success Approving / Rejecting overtime process by hrd" });
+  return res.status(200).json({
+    body: "Success Approving / Rejecting overtime process by HRD",
+  });
 };
+
+// const approveRejectHrdReview = async (req, res) => {
+//   const hrdCode = req.user.employee_id;
+//   const { data, payrollPeriod, status, reason } = req.body;
+//   const arrayResult = [];
+
+//   for (const overtime of data) {
+//     const {
+//       otId,
+//       employeeCode,
+//       formatedDateOvertime,
+//       timeFrom,
+//       timeTo,
+//       workLoad,
+//       filedHours,
+//       oTType,
+//     } = overtime;
+
+//     const processOvertime = await sqlHelper.transact(async (txn) => {
+//       if (status === "Approved") {
+//         const updateNewOvertimeStatus =
+//           await overtimeModel.updateOvertimeAction(
+//             {
+//               Status: "Approved",
+//               HrdProcessBy: hrdCode,
+//               PayrollPeriod: payrollPeriod,
+//               ApprovedHours: filedHours,
+//               OTType: oTType,
+//             },
+//             { OtId: otId },
+//             txn,
+//             "HrdProcessDate",
+//           );
+
+//         const insertIntoOldOvertimeTable =
+//           await overtimeModel.insertIntoOldOvertime(
+//             {
+//               CODE: employeeCode,
+//               DATE_OF_LEAVE: formatedDateOvertime,
+//               HOURS: filedHours,
+//               WORK: workLoad,
+//               USERID: employeeCode,
+//               APPROVED: 1,
+//               TIME_FROM: timeFrom,
+//               TIME_TO: timeTo,
+//               "[APPROVE DATE]": adjustTime(
+//                 updateNewOvertimeStatus.approvedByLevel2DateTime,
+//               ),
+//               "[APPROVE BY]": updateNewOvertimeStatus.approvedByLevel2,
+//               forPayment: 1,
+//               payrollPeriod: payrollPeriod,
+//             },
+//             txn,
+//             "DATE",
+//           );
+
+//         const updateNewOvertimeOtOldId =
+//           await overtimeModel.updateOvertimeAction(
+//             {
+//               OldOtId: insertIntoOldOvertimeTable.iD,
+//             },
+//             { OtId: otId },
+//             txn,
+//             "HrdProcessDate",
+//           );
+
+//         const insertIntoAllowedOvertime =
+//           await overtimeModel.insertIntoAllowedOvertime(
+//             {
+//               CODE: employeeCode,
+//               "[OT ID]": updateNewOvertimeOtOldId.oldOtId,
+//               "[ALLOW BY]": updateNewOvertimeOtOldId.accomplishedApprovedBy,
+//               CANCELLED: 0,
+//               "[HEAD APPROVED]": 0,
+//               TRANSMITTAL: updateNewOvertimeOtOldId.workLoad,
+//               "[TRANSMITTAL DATE]":
+//                 updateNewOvertimeOtOldId.accomplishedDateTime,
+//               FINAL: 1,
+//               "[FINAL BY]": updateNewOvertimeOtOldId.hrdProcessBy,
+//               "[FINAL DATE]": updateNewOvertimeOtOldId.hrdProcessDate,
+//               HOURS: updateNewOvertimeOtOldId.approvedHours,
+//               "[HEAD ALLOWED]": 1,
+//             },
+//             txn,
+//             "[ALLOW DATE]",
+//           );
+
+//         const insertIntoOTSummary = await overtimeModel.insertIntoSummary(
+//           {
+//             otId: updateNewOvertimeOtOldId.oldOtId,
+//             hours: updateNewOvertimeOtOldId.approvedHours,
+//             type: updateNewOvertimeOtOldId.oTType,
+//             payrollPeriod: updateNewOvertimeOtOldId.payrollPeriod,
+//           },
+//           txn,
+//           "createDate",
+//         );
+
+//         return insertIntoOTSummary;
+//       } else {
+//         return await overtimeModel.updateOvertimeAction(
+//           {
+//             Status: "RejectedByHrd",
+//             RejectedBy: hrdCode,
+//             RejectedReason: reason,
+//           },
+//           { OtId: otId },
+//           txn,
+//           "RejectedDateTime",
+//         );
+//       }
+//     });
+
+//     arrayResult.push(processOvertime);
+//   }
+
+//   if (arrayResult.length === 0)
+//     res.status(500).json({
+//       body: "Error in approving / rejecting the overtime process by hrd",
+//     });
+
+//   res
+//     .status(200)
+//     .json({ body: "Success Approving / Rejecting overtime process by hrd" });
+// };
 
 const statusStatement = ({ status, employeeCode, cancelModule }) => {
   const map = {
@@ -904,6 +1076,18 @@ const approveRejectAccomplishment = async (req, res) => {
   res.status(200).json({ body: "Success approving overtime accomplishment" });
 };
 
+const unpaidOvertime = async (req, res) => {
+  const { fromDate, toDate, classCode } = req.query;
+
+  const data = await overtimeModel.unpaidOvertime(fromDate, toDate, classCode);
+
+  if (!Array.isArray(data) || data.length === 0) {
+    return res.status(500).json({ message: "Error in getting data." });
+  }
+
+  return res.status(200).json(data);
+};
+
 module.exports = {
   overtimeRequest,
   getPendingOvertime,
@@ -924,4 +1108,5 @@ module.exports = {
   submitAccomplishment,
   getPendingAccomplishment,
   approveRejectAccomplishment,
+  unpaidOvertime,
 };

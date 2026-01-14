@@ -4027,7 +4027,7 @@ const postRegisterAssetCE = async function (req, res) {
       entries,
       formattedDates,
       lastDig,
-      accountableEmp,
+      // accountableEmp,
       accountabilityRef,
     } = req.body;
 
@@ -4128,7 +4128,8 @@ const postRegisterAssetCE = async function (req, res) {
           oldAssetCode: newAssetsCode,
           receivingDepartment: assetsInfo.deptCode,
           itAssetCode: finalItAssetCode,
-          accountableEmployee: accountableEmp,
+          accountableEmployee: assetsInfo.accountableEmployeeCode,
+          // accountableEmp,
           originId: assetsInfo.originCode,
           itemCode: assetsInfo.itemCode.toUpperCase(),
           categoryId: catMeCory,
@@ -4205,7 +4206,7 @@ const manualRegistrationCe = async function (req, res) {
       assetCodeUserInput,
       itAssetCodePrefixInput,
       catCode,
-      accountableEmp,
+      // accountableEmp,
     } = req.body;
 
     let digitsAfterSlash = "1";
@@ -4264,7 +4265,8 @@ const manualRegistrationCe = async function (req, res) {
         receivingDepartment: assetsInfo.deptCode,
         assetTagStatus: assetsInfo.assetTagStatus,
         itAssetCode: partBeforeSlash.toUpperCase(),
-        accountableEmployee: accountableEmp.toUpperCase(),
+        accountableEmployee: assetsInfo.accountableEmployeeCode,
+        // --accountableEmp.toUpperCase(),
         originId: assetsInfo.originCode,
         itemCode: assetsInfo.itemCode.toUpperCase(),
         categoryId: assetsInfo.categoryId,

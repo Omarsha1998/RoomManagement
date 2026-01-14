@@ -32,28 +32,33 @@ const getPurchaseRequests = async function (req, res) {
       let order = "";
       if (deptCode) {
         if (approver) {
-          sqlWhere = `and fromDepartment IN (${deptCode}) and convert(date, dateTimeCreated) between '${fromDate}' and '${toDate}'`;
+          sqlWhere = `and fromDepartment IN (${deptCode}) and convert(date, dateTimeCreated) between '${fromDate}' and '${toDate}'
+             -- and type not in ('warehousepr', 'rivwarehouse')
+          `;
           order =
             purchaseDeptCode !== undefined
-              ? "dateTimeApproved asc"
-              : "dateTimeCreated asc";
+              ? "dateTimeApproved desc"
+              : "dateTimeCreated desc";
         } else if (viewing) {
           sqlWhere = `and fromDepartment = '${deptCode}'`;
           top = 10;
           order = "dateTimeCreated desc";
         } else {
           if (!deptCode.includes(",")) {
-            sqlWhere = `and fromDepartment = '${deptCode}'  and convert(date,  dateTimeCreated) between '${fromDate}' and '${toDate}'`;
+            sqlWhere = `and fromDepartment = '${deptCode}'  and convert(date,  dateTimeCreated) between '${fromDate}' and '${toDate}' 
+            -- and type not in ('warehousepr', 'rivwarehouse')`;
             order =
               purchaseDeptCode !== undefined
-                ? "dateTimeApproved asc"
-                : "dateTimeCreated asc";
+                ? "dateTimeApproved desc"
+                : "dateTimeCreated desc";
           } else {
-            sqlWhere = `and fromDepartment IN (${deptCode})  and convert(date,  dateTimeCreated) between '${fromDate}' and '${toDate}'`;
+            sqlWhere = `and fromDepartment IN (${deptCode})  and convert(date,  dateTimeCreated) between '${fromDate}' and '${toDate}'
+              -- and type not in ('warehousepr', 'rivwarehouse')
+            `;
             order =
               purchaseDeptCode !== undefined
-                ? "dateTimeApproved asc"
-                : "dateTimeCreated asc";
+                ? "dateTimeApproved desc"
+                : "dateTimeCreated desc";
           }
         }
       } else if (userCode) {
@@ -76,16 +81,16 @@ const getPurchaseRequests = async function (req, res) {
             : "dateTimeCreated asc";
       } else if (approvals) {
         if (requestClass === "" || requestClass === "supplies") {
-          sqlWhere = `and type = '${type}' and (class is null or class = 'supplies') and convert(date, dateTimeApproved) between '${fromDate}' and '${toDate}'`;
+          sqlWhere = `and type = '${type}' and convert(date, dateTimeCreated) between '${fromDate}' and '${toDate}'`;
         } else {
           if (requestClass === undefined) {
-            sqlWhere = `and type = '${type}'  and convert(date, dateTimeApproved) between '${fromDate}' and '${toDate}'`;
+            sqlWhere = `and type = '${type}' and convert(date, dateTimeCreated) between '${fromDate}' and '${toDate}'`;
           } else {
-            sqlWhere = `and type = '${type}' and class = '${requestClass}' and convert(date, dateTimeApproved) between '${fromDate}' and '${toDate}'`;
+            sqlWhere = `and type = '${type}' and class = '${requestClass}' and convert(date, dateTimeCreated) between '${fromDate}' and '${toDate}'`;
           }
         }
 
-        order = "dateTimeApproved asc";
+        order = "dateTimeCreated asc";
       } else if (prWarehouse) {
         sqlWhere = `and fromDepartment = '${fromDepartment}' and convert(date, dateTimeCreated) between '${fromDate}' and '${toDate}'`;
         order = "dateTimeCreated asc";
@@ -101,6 +106,21 @@ const getPurchaseRequests = async function (req, res) {
       );
 
       if (prSelect.length > 0) {
+        // prSelect.forEach(async (list) => {
+        // for (const list of prSelect) {
+        //   const itemCats = await purchaseRequests.selectPRItemCat(
+        //     "and prCode = ?",
+        //     [list.code],
+        //     {},
+        //   );
+        //   list.newProp = "test";
+        //   list.itemCategories =
+        //     itemCats.length > 0
+        //       ? itemCats.map((item) => item.category).join(", ")
+        //       : null;
+        // }
+        // });
+
         return prSelect;
       }
       return [];
@@ -121,6 +141,26 @@ const getPurchaseRequestTypes = async function (req, res) {
     try {
       const sqlWhere = "and active = 1";
       return await purchaseRequests.selectPurchaseRequestTypes(sqlWhere, txn, {
+        top: {},
+        order: "",
+      });
+    } catch (error) {
+      console.log(error);
+      return { error: error };
+    }
+  });
+
+  if (returnValue.error !== undefined) {
+    return res.status(500).json({ error: `${returnValue.error}` });
+  }
+  return res.json(returnValue);
+};
+
+const getPRStatus = async function (req, res) {
+  const returnValue = await sqlHelper.transact(async (txn) => {
+    try {
+      const sqlWhere = "and active = 1";
+      return await purchaseRequests.selectStatus(sqlWhere, txn, {
         top: {},
         order: "",
       });
@@ -204,6 +244,83 @@ const getPurchaseRequestItems = async function (req, res) {
   return res.json(returnValue);
 };
 
+const getPRItemHistory = async function (req, res) {
+  if (util.empty(req.query.itemCode) || util.empty(req.query.deptCode)) {
+    return res.status(400).json({ error: "`code` query in URL is required." });
+  }
+
+  const returnValue = await sqlHelper.transact(async (txn) => {
+    const itemCode = req.query.itemCode;
+    const deptCode = req.query.deptCode;
+
+    try {
+      let sqlWhere = "";
+      if (itemCode) {
+        sqlWhere = `and pri.itemCode = '${itemCode}' 
+        and pr.fromDepartment = '${deptCode}'`;
+      }
+      return await purchaseRequestItems.selectPurchaseRequestItems(
+        sqlWhere,
+        txn,
+        {
+          top: 1,
+          order: "pr.dateTimeCreated desc",
+        },
+      );
+    } catch (error) {
+      console.log(error);
+      return { error: error };
+    }
+  });
+
+  if (returnValue.error !== undefined) {
+    return res.status(500).json({ error: `${returnValue.error}` });
+  }
+  return res.json(returnValue);
+};
+
+const getWarehouseDepartmentItems = async function (req, res) {
+  if (util.empty(req.query.fromDate) || util.empty(req.query.toDate)) {
+    return res.status(400).json({ error: "`code` query in URL is required." });
+  }
+
+  const returnValue = await sqlHelper.transact(async (txn) => {
+    const { fromDate, toDate, deptCode } = req.query;
+
+    try {
+      const sqlWhere = `and a.fromDepartment = ?
+        and a.active = 1 
+        and a.status <> 0 
+        and type = 'stockitem' 
+        and convert(date, b.dateTimeCreated) between ? 
+        and ? `;
+
+      const args = [deptCode, fromDate, toDate];
+
+      const warehouseDeptItems =
+        await purchaseRequests.selectWarehouseDepartmentItems(
+          sqlWhere,
+          args,
+          {
+            top: "",
+            order: "b.itemCode, dateTimeCreated desc",
+          },
+          txn,
+        );
+
+      return warehouseDeptItems;
+    } catch (error) {
+      console.log(error);
+      return { error: error };
+    }
+  });
+
+  if (returnValue.error !== undefined) {
+    return res.status(500).json({ error: `${returnValue.error}` });
+  }
+  return res.json(returnValue);
+};
+
 const savePurchaseRequests = async function (req, res) {
   if (util.empty(req.body))
     return res.status(400).json({ error: "`code` query in URL is required." });
@@ -219,7 +336,7 @@ const savePurchaseRequests = async function (req, res) {
           : prDetails.type === "rivwarehouse"
             ? "IR"
             : "PR",
-        2,
+        3,
         "code",
         false,
         txn,
@@ -314,6 +431,13 @@ const updatePurchaseRequest = async function (req, res) {
         //   payload.approvedBy = employeeId;
         //   payload.dateTimeApproved = await util.currentDateTime();
         // }
+
+        // payload.approvedBy = employeeId;
+        // payload.dateTimeApproved = await util.currentDateTime();
+
+        payload.status = 5;
+        payload.completedBy = employeeId;
+        payload.dateTimeCompleted = await util.currentDateTime();
         payload.approvedBy = employeeId;
         payload.dateTimeApproved = await util.currentDateTime();
       }
@@ -478,28 +602,35 @@ const replaceItem = async function (req, res) {
       const payload = req.body;
 
       const employeeId = util.currentUserToken(req).code;
-      const rejectInitialItemPayload = {
-        status: payload.rejectItem.status,
-        rejectedBy: employeeId,
-        dateTimeRejected: await util.currentDateTime(),
-        rejectionRemarks: `ITEM REPLACED BY ITEM CODE ${payload.insertItem.itemCode}`,
-      };
-
-      const rejectedItem =
-        await purchaseRequestItems.updatePurchaseRequestItems(
-          rejectInitialItemPayload,
-          { prCode: payload.rejectItem.code, id: payload.rejectItem.itemId },
-          txn,
-        );
 
       let insertedItem = {};
-      if (Object.keys(rejectedItem).length > 0) {
-        payload.insertItem.createdBy = employeeId;
-        payload.insertItem.updatedBy = employeeId;
-        insertedItem = await purchaseRequestItems.insertPurchaseRequestItems(
-          payload.insertItem,
-          txn,
-        );
+      if (Object.keys(payload.rejectItem).length > 0) {
+        const rejectInitialItemPayload = {
+          status: payload.rejectItem.status,
+          rejectedBy: employeeId,
+          dateTimeRejected: await util.currentDateTime(),
+          rejectionRemarks: `ITEM REPLACED BY ITEM CODE ${payload.insertItem.itemCode}`,
+        };
+
+        const rejectedItem =
+          await purchaseRequestItems.updatePurchaseRequestItems(
+            rejectInitialItemPayload,
+            { prCode: payload.rejectItem.code, id: payload.rejectItem.itemId },
+            txn,
+          );
+
+        if (Object.keys(rejectedItem).length > 0) {
+          if (Object.keys(payload.insertItem).length > 0) {
+            payload.insertItem.createdBy = employeeId;
+            payload.insertItem.updatedBy = employeeId;
+            payload.insertItem.rejectionRemarks = `ORIGINAL ITEM CODE IS ${payload.rejectItem.itemCode}`;
+            insertedItem =
+              await purchaseRequestItems.insertPurchaseRequestItems(
+                payload.insertItem,
+                txn,
+              );
+          }
+        }
       }
       return insertedItem;
     } catch (error) {
@@ -514,10 +645,13 @@ const replaceItem = async function (req, res) {
 };
 
 module.exports = {
+  getPRStatus,
   getPurchaseRequests,
   getPurchaseRequestItems,
   getPurchaseRequestTypes,
   getPurchaseRequestWithPO,
+  getPRItemHistory,
+  getWarehouseDepartmentItems,
   savePurchaseRequests,
   updatePurchaseRequest,
   updatePurchaseRequestItems,

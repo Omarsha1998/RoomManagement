@@ -953,7 +953,7 @@ const insertAssets = async function (payload, txn) {
 const updateDeptViewAccess = async function (payload, condition, txn) {
   try {
     return await sqlHelper.updateMany(
-      "UERMINV..AsventoSubDepartments",
+      "UERMINV.dbo.AsventoSubDepartments",
       payload,
       condition,
       txn,

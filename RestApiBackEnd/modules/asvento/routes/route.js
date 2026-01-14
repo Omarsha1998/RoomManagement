@@ -150,6 +150,11 @@ router.get(
   validateAccessToken,
   employeesController.getActiveEmployeesOnly,
 );
+router.get(
+  "/emps-no-dept",
+  validateAccessToken,
+  employeesController.getActiveEmployeesOnlyNoDept,
+);
 
 router.get(
   "/dept-asset-transferred-log",
@@ -761,9 +766,10 @@ router.get(
   validateAccessToken,
   departmentsController.getLiveDepartments,
 );
+
 router.get(
   "/departments-primary",
-  validateAccessToken,
+  // validateAccessToken,
   departmentsController.getPrimaryOnly,
 );
 

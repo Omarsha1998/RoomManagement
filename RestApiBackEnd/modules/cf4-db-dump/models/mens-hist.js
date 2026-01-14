@@ -8,19 +8,37 @@ const columns = [
     name: "menarchePeriod",
     default: null,
     source: "obgynehistageinyrs",
-    format: (val) => JSON.parse(val),
+    format: (v) => {
+      if (Number.isNaN(Number(v))) {
+        return null;
+      }
+
+      return JSON.parse(v);
+    },
   },
   {
     name: "periodDuration",
     default: null,
     source: "obgynehistdurationmin", // or obgynehistdurationmax
-    format: (val) => JSON.parse(val),
+    format: (v) => {
+      if (Number.isNaN(Number(v))) {
+        return null;
+      }
+
+      return JSON.parse(v);
+    },
   },
   {
     name: "mensInterval",
     default: null,
     source: "obgynehistcycle",
-    format: (val) => JSON.parse(val),
+    format: (v) => {
+      if (Number.isNaN(Number(v))) {
+        return null;
+      }
+
+      return JSON.parse(v);
+    },
   },
   // padsPerDay DATA TYPE IS NOT COMPATIBLE WITH obgynehistamount CONTENT OF EHR
   {
@@ -109,7 +127,7 @@ const select = async (pxInfo, conn) => {
   return null;
 };
 
-const insert = async (userCode, patientCode, patientGender, item, txn) => {
+const upsert = async (userCode, patientCode, patientGender, item, txn) => {
   if (!userCode) throw "`userCode` is required.";
   if (!patientCode) throw "`patientCode` is required.";
   if (!patientGender) throw "`patientGender` is required.";
@@ -145,5 +163,5 @@ module.exports = {
   columns,
   columnsMap,
   select,
-  insert,
+  upsert,
 };

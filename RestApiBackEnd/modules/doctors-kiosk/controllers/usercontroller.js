@@ -5,7 +5,6 @@ const login = async (req, res) => {
   try {
     const { secretaryCode, password } = req.body;
 
-    console.log(secretaryCode, password);
     if (!secretaryCode || !password) {
       return res
         .status(422)

@@ -124,49 +124,111 @@ const getEmployeeDtr = async (req, res) => {
 const setSchedule = async (req, res) => {
   try {
     const { dataArray } = req.body;
-    const { employeeCode, dateSelected, timeSelected } = dataArray[0];
     const createdBy = req.user.employee_id;
 
-    const existingSchedule = await DutyModel.checkDuplicateSchedule(
-      employeeCode,
-      dateSelected,
-    );
+    const result = await sqlHelper.transact(async (txn) => {
+      const finalResult = [];
 
-    const scheduleData = {
-      SCHEDID: timeSelected,
-      EMPCODE: employeeCode,
-      DATE: dateSelected,
-      ActiveSched: 1,
-      TYPE: "SCHEDULE",
-      CreatedBy: createdBy,
-    };
+      for (const data of dataArray) {
+        const { employeeCode, dateSelected, timeSelected } = data;
 
-    if (existingSchedule.length > 0) {
-      const updated = await sqlHelper.transact(async (txn) => {
-        return await DutyModel.updateSetSchedule(
-          scheduleData,
-          { ID: existingSchedule[0].iD },
-          txn,
-          "DateCreated",
+        const existingSchedule = await DutyModel.checkDuplicateSchedule(
+          employeeCode,
+          dateSelected,
         );
-      });
 
-      if (!updated) throw new Error("Error in updating schedule");
+        const scheduleData = {
+          SCHEDID: timeSelected,
+          EMPCODE: employeeCode,
+          DATE: dateSelected,
+          ActiveSched: 1,
+          TYPE: "SCHEDULE",
+          CreatedBy: createdBy,
+        };
 
-      return res.status(200).json({ body: "Schedule updated successfully" });
+        if (existingSchedule.length > 0) {
+          const updated = await DutyModel.updateSetSchedule(
+            scheduleData,
+            { ID: existingSchedule[0].iD },
+            txn,
+            "DateCreated",
+          );
+          finalResult.push({ success: !!updated, action: "updated" });
+        } else {
+          const inserted = await DutyModel.setNewSchedule(
+            scheduleData,
+            txn,
+            "DateCreated",
+          );
+          finalResult.push({ success: !!inserted, action: "inserted" });
+        }
+      }
+      return finalResult;
+    });
+    const allSuccessful = result.every((result) => result.success);
+
+    if (!allSuccessful) {
+      throw new Error("Error in processing some schedules");
     }
 
-    const inserted = await sqlHelper.transact(async (txn) => {
-      return await DutyModel.setNewSchedule(scheduleData, txn, "DateCreated");
+    const updatedCount = result.filter((r) => r.action === "updated").length;
+    const insertedCount = result.filter((r) => r.action === "inserted").length;
+
+    return res.status(200).json({
+      body: `Successfully processed ${dataArray.length} schedule(s): ${insertedCount} inserted, ${updatedCount} updated`,
     });
-
-    if (!inserted) throw new Error("Error in setting new schedule");
-
-    return res.status(200).json({ body: "New schedule set successfully" });
   } catch (error) {
     return res.status(500).json({ body: error.message });
   }
 };
+
+// const setSchedule = async (req, res) => {
+//   try {
+//     const { dataArray } = req.body;
+
+//     const { employeeCode, dateSelected, timeSelected } = dataArray[0];
+//     const createdBy = req.user.employee_id;
+
+//     const existingSchedule = await DutyModel.checkDuplicateSchedule(
+//       employeeCode,
+//       dateSelected,
+//     );
+
+//     const scheduleData = {
+//       SCHEDID: timeSelected,
+//       EMPCODE: employeeCode,
+//       DATE: dateSelected,
+//       ActiveSched: 1,
+//       TYPE: "SCHEDULE",
+//       CreatedBy: createdBy,
+//     };
+
+//     if (existingSchedule.length > 0) {
+//       const updated = await sqlHelper.transact(async (txn) => {
+//         return await DutyModel.updateSetSchedule(
+//           scheduleData,
+//           { ID: existingSchedule[0].iD },
+//           txn,
+//           "DateCreated",
+//         );
+//       });
+
+//       if (!updated) throw new Error("Error in updating schedule");
+
+//       return res.status(200).json({ body: "Schedule updated successfully" });
+//     }
+
+//     const inserted = await sqlHelper.transact(async (txn) => {
+//       return await DutyModel.setNewSchedule(scheduleData, txn, "DateCreated");
+//     });
+
+//     if (!inserted) throw new Error("Error in setting new schedule");
+
+//     return res.status(200).json({ body: "New schedule set successfully" });
+//   } catch (error) {
+//     return res.status(500).json({ body: error.message });
+//   }
+// };
 
 const submitNewSchedule = async (req, res) => {
   const { timeFrom, timeTo, restDay, dayOff, withBreak } = req.body;

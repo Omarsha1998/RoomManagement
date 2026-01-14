@@ -95,19 +95,23 @@ const format = (val) => {
       const genericName =
         med.genericName?.value || med.genericName?.toUpperCase() || "";
 
-      const quantity = med.quantity?.value || med.quantity || med.qty || 0;
       const strength = med.strength?.value || med.strength || med.dosage || "";
       const form = med.form?.value || med.form || "";
 
       const route =
-        med.route?.value?.toUpperCase() || med.route?.toUpperCase() || "";
+        med.route?.value?.toUpperCase?.() || med.route?.toUpperCase?.() || "";
 
       // const salt = "";
-      // const unit = med.unit ? med.unit.toUpperCase() : "";
-      // const _package = med.package ? med.package.toUpperCase() : "";
+      // const unit = med.unit?.value?.toUpperCase() || med.unit?.toUpperCase() || "";
+      // const _package = med.package?.value?.toUpperCase() || med.package?.toUpperCase() || "";
+
+      const quantity = med.quantity?.value || med.quantity || med.qty || 0;
 
       const totalAmtPrice =
         med.totalCost?.value || med.totalCost || med.cost || 0;
+
+      const dateTimeCharged =
+        med.dateTimeCharged?.value || med.dateTimeCharged || null;
 
       return {
         // genericName: `${genericName}|${salt}|${strength}|${form}|${unit}|${_package}`,
@@ -117,7 +121,7 @@ const format = (val) => {
         quantity,
         route,
         totalAmtPrice,
-        dateAdded: med.dateTimeCharged ? new Date(med.dateTimeCharged) : null,
+        dateAdded: dateTimeCharged ? new Date(dateTimeCharged) : null,
       };
     })
     .filter((med) => {
@@ -131,7 +135,7 @@ const format = (val) => {
     });
 };
 
-const select = async (caseNo) => {
+const select = async (caseNo, txn) => {
   if (!caseNo) {
     throw "`caseNo` is required.";
   }
@@ -139,32 +143,35 @@ const select = async (caseNo) => {
   const rows = await db.query(
     `
       SELECT
-        T0.caseNo,
-        T0.CHARGESLIPNO chargeSlipNo,
-        T0.CHARGEDATETIME dateTimeCharged,
-        T3.itemCode,
-        T3.brandName,
-        T3.GenName genericName,
-        T3.MG strength, /* IN PHAR_ITEMS strength AND/OR unit CAN BE FOUND IN Mg */
-        T3.MG unit,
-        T3.DosageForm form, /* IN PHAR_ITEMS form AND/OR package CAN BE FOUND IN DosageForm */
-        T3.DosageForm package,
+        cm.caseNo,
+        cm.CHARGESLIPNO chargeSlipNo,
+        cm.CHARGEDATETIME dateTimeCharged,
+        pi.itemCode,
+        pi.brandName,
+        pi.GenName genericName,
+        pi.MG strength, /* IN PHAR_ITEMS strength AND/OR unit CAN BE FOUND IN Mg */
+        pi.MG unit,
+        pi.DosageForm form, /* IN PHAR_ITEMS form AND/OR package CAN BE FOUND IN DosageForm */
+        pi.DosageForm package,
         '' route,
-        T2.SellingPrice sellingPrice,
-        T2.DiscAmt discountAmount,
-        T2.Qty quantity,
-        ((T2.SellingPrice * T2.Qty) - T2.DiscAmt) totalCost
+        psd.SellingPrice sellingPrice,
+        psd.DiscAmt discountAmount,
+        psd.Qty quantity,
+        ((psd.SellingPrice * psd.Qty) - psd.DiscAmt) totalCost
       FROM 
-        [UERMMMC]..[CHARGES_MAIN] T0 WITH(NOLOCK)
-        INNER JOIN [UERMMMC]..[PHAR_Sales_Parent] T1 WITH(NOLOCK) ON T0.CHARGESLIPNO = T1.CSNo
-        INNER JOIN [UERMMMC]..[PHAR_Sales_Details] T2 WITH(NOLOCK) ON T1.SalesNo = T2.SalesNo
-        INNER JOIN [UERMMMC]..[PHAR_ITEMS] T3 WITH(NOLOCK) ON T2.ItemCode = T3.ItemCode
+        [UERMMMC]..[CHARGES_MAIN] cm
+        INNER JOIN [UERMMMC]..[PHAR_Sales_Parent] psp ON cm.ChargeSlipNo = psp.CSNo
+        INNER JOIN [UERMMMC]..[PHAR_Sales_Details] psd ON psp.SalesNo = psd.SalesNo
+        INNER JOIN [UERMMMC]..[PHAR_ITEMS] pi ON psd.ItemCode = pi.ItemCode
       WHERE
-        (T0.CANCELED = 'N' AND T1.Cancelled = 0)
-        AND T3.PhicGroupCode = 'MED'
-        AND T0.CASENO = ?;
+        ISNULL(cm.CANCELED, 'N') <> 'Y'
+        AND psp.Cancelled = 0
+        AND pi.PhicGroupCode = 'MED'
+        AND cm.CaseNo = ?;
     `,
     [caseNo],
+    txn,
+    false,
   );
 
   if (rows?.error) {
@@ -201,12 +208,22 @@ const select = async (caseNo) => {
 //   );
 // };
 
-const insert = async (userCode, consultationId, item, txn) => {
-  if (!userCode) throw "`userCode` is required.";
-  if (!consultationId) throw "`consultationId` is required.";
-  if (!txn) throw "`txn` is required.";
+const upsert = async (userCode, consultationId, item, txn) => {
+  if (!userCode) {
+    throw "`userCode` is required.";
+  }
 
-  if (!item) item = {};
+  if (!consultationId) {
+    throw "`consultationId` is required.";
+  }
+
+  if (!txn) {
+    throw "`txn` is required.";
+  }
+
+  if (!item) {
+    item = {};
+  }
 
   const genericName = item.genericName;
   const dateAdded = jsDateToISOString(item.dateAdded);
@@ -215,14 +232,16 @@ const insert = async (userCode, consultationId, item, txn) => {
 
   const existingMed = (
     await db.query(
-      `SELECT
-            *
-          FROM 
-            ${tableName}
-          WHERE
-            ConsultationId = ?
-            AND GenericName = ?
-            AND DateAdded = ?;`,
+      `
+        SELECT
+          *
+        FROM 
+          ${tableName}
+        WHERE
+          ConsultationId = ?
+          AND GenericName = ?
+          AND DateAdded = ?;
+      `,
       [consultationId, genericName, dateAdded],
       txn,
     )
@@ -263,5 +282,5 @@ module.exports = {
   columnsMap,
   format,
   select,
-  insert,
+  upsert,
 };

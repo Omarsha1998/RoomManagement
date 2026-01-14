@@ -2,6 +2,9 @@ const { Router } = require("express");
 const itemsController = require("../controllers/itemController");
 const departmentsController = require("../controllers/departmentController");
 const purchaseRequestController = require("../controllers/purchaseRequestController");
+const printerController = require("../controllers/printerController");
+const receivingController = require("../controllers/receivingController");
+const analyticsController = require("../controllers/analyticsController");
 
 const { validateAccessToken } = require("../../../helpers/crypto");
 
@@ -63,11 +66,31 @@ router.get(
   validateAccessToken,
   departmentsController.getPRApprovers,
 );
+
+router.get(
+  "/medicine-depts",
+  validateAccessToken,
+  departmentsController.getMedicineDepartments,
+);
+
 router.get(
   "/pr-types",
   validateAccessToken,
   purchaseRequestController.getPurchaseRequestTypes,
 );
+
+router.get(
+  "/pr-status",
+  validateAccessToken,
+  purchaseRequestController.getPRStatus,
+);
+
+router.get(
+  "/pr-item-history",
+  validateAccessToken,
+  purchaseRequestController.getPRItemHistory,
+);
+
 router.get("/pr-po", purchaseRequestController.getPurchaseRequestWithPO);
 router.get("/dept-item-test", itemsController.insertDepartmentItemsTest);
 
@@ -76,6 +99,37 @@ router.get(
   validateAccessToken,
   itemsController.getItemStockRooms,
 );
+router.get(
+  "/warehouse-department-items",
+  validateAccessToken,
+  purchaseRequestController.getWarehouseDepartmentItems,
+);
+
+router.get(
+  "/receiving",
+  validateAccessToken,
+  receivingController.getReceivingDetails,
+);
+router.get(
+  "/receiving-items",
+  validateAccessToken,
+  receivingController.getReceivingDetailItems,
+);
+router.get(
+  "/receiving-docs/:code",
+  validateAccessToken,
+  receivingController.getReceivingDetailDocs,
+);
+router.get("/printers", validateAccessToken, printerController.getPrinter);
+
+router.get("/analytics", validateAccessToken, analyticsController.getAnalytics);
+
+router.get(
+  "/analytics/reports",
+  validateAccessToken,
+  analyticsController.getAnalyticsReport,
+);
+// router.get("/test", printerController.getPRITems);
 
 // POST REQUESTS
 router.post(
@@ -114,12 +168,41 @@ router.post(
 
 router.post("/item", validateAccessToken, itemsController.postItem);
 
+router.post(
+  "/print-barcode",
+  validateAccessToken,
+  printerController.printBarcode,
+);
+
+router.post(
+  "/receiving",
+  validateAccessToken,
+  receivingController.postReceivingDetails,
+);
+
+router.post(
+  "/analytics/reports",
+  validateAccessToken,
+  analyticsController.postAnalyticsReport,
+);
+
 // PUT REQUESTS
 router.put("/items", validateAccessToken, itemsController.putItem);
 router.put(
   "/items-subcategories",
-  validateAccessToken,
+  // validateAccessToken,
   itemsController.putSubcategories,
+);
+
+router.put(
+  "/receiving",
+  validateAccessToken,
+  receivingController.putReceivingDetail,
+);
+router.put(
+  "/receiving-items",
+  validateAccessToken,
+  receivingController.putReceivingDetailItems,
 );
 
 router.put(
@@ -127,6 +210,7 @@ router.put(
   validateAccessToken,
   purchaseRequestController.updatePurchaseRequest,
 );
+
 router.put(
   "/pr-items/:code",
   validateAccessToken,

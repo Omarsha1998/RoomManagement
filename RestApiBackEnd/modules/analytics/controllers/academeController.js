@@ -12,7 +12,7 @@ const getHighSchools = async function (req, res) {
         top: {},
         order: {},
       });
-			console.log(highSchools)
+      // console.log(highSchools)
       return highSchools;
     } catch (error) {
       console.log(error);

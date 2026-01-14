@@ -12,19 +12,19 @@ const calculateTotalLeaveValue = async (
   // const args3 = [employeeID, LeaveType];
   // const sqlWhereStrArr2 = ["IDCode = ?", "LeaveType = ?", "status IN (?, ?)"];
   // const args2 = [employeeID, LeaveType, "Pending", "PendingLevel2"];
-
   // Query to get remaining days from [UE database]..leaveledger
   const leaveLedgerQuery = await sqlHelper.query(
-    `SELECT
-            l.leaveType,
-            SUM(l.debit - l.credit) AS remaining
-        FROM
-            [HR]..vw_LeaveCreditsV2 l
-        WHERE l.Code = ? and l.leaveType = ?
-        GROUP BY 
-          l.leaveType
-          ORDER BY l.leaveType;
-        `,
+    `
+    SELECT
+      l.leaveType,
+      SUM(l.debit - l.credit) AS remaining
+    FROM
+      [HR]..vw_LeaveCreditsV2 l
+    WHERE l.Code = ? and l.leaveType = ?
+    GROUP BY 
+      l.leaveType
+      ORDER BY l.leaveType
+    `,
     [employeeCode, leavetype],
   );
 
@@ -2200,73 +2200,49 @@ const getCancelPending = async (
 
 const getApproversDetails = async (employeeId) => {
   // return await sqlHelper.query(
-  //   `SELECT
-  //       e.DeptCode,
-  //       e.EmployeeCode,
-  //       a.lvl,
-  //       a.code AS approversCode,
-  //       emp.FirstName,
-  //       emp.MiddleInitial,
-  //       emp.LastName
-  //   FROM
-  //       [UE database]..Employee e
-  //   JOIN
-  //       HR..Approvers a ON e.DeptCode = a.deptCode
-  //   JOIN
-  //       [UE database]..Employee emp ON a.code = emp.EmployeeCode
-  //   ${sqlWhereStrArr.length > 0 ? "WHERE " + sqlWhereStrArr.join(" AND "): ""}
-  //   GROUP BY
-  //       e.DeptCode,
-  //       e.EmployeeCode,
-  //       a.lvl,
-  //       a.code,
-  //       emp.FirstName,
-  //       emp.MiddleInitial,
-  //       emp.LastName
-  //   ORDER BY a.lvl, emp.LastName
-  //   `,
-  //   args
-  // )
-  // return await sqlHelper.query(
-  //   `SELECT
-  //         e.DeptCode,
-  //         e.EmployeeCode,
-  //         a.lvl,
-  //         a.code AS approversCode,
-  //         a.employeeCodes,
-  //         emp.FirstName,
-  //         emp.MiddleInitial,
-  //         emp.LastName
-  //     FROM
-  //         [UE database]..Employee e
-  //     JOIN
-  //         HR..Approvers a ON e.DeptCode = a.deptCode AND a.deleted = 0
-  //     JOIN
-  //         [UE database]..Employee emp ON a.code = emp.EmployeeCode
-  //     WHERE
-  //         e.EmployeeCode = ?
-  //         AND (
-  //             ',' + a.employeeCodes + ',' LIKE '%,' + e.EmployeeCode + ',%'
-  //             OR e.DeptCode = a.deptCode AND NOT EXISTS (
-  //                 SELECT 1
-  //                 FROM HR..Approvers a2
-  //                 WHERE e.DeptCode = a2.deptCode
-  //                 AND a2.deleted = 0
-  //                 AND ',' + a2.employeeCodes + ',' LIKE '%,' + e.EmployeeCode + ',%'
-  //             )
-  //         )
-  //     GROUP BY
-  //         e.DeptCode,
-  //         e.EmployeeCode,
-  //         a.lvl,
-  //         a.code,
-  //         a.employeeCodes,
-  //         emp.FirstName,
-  //         emp.MiddleInitial,
-  //         emp.LastName
-  //     ORDER BY
-  //         a.lvl,
-  //         emp.LastName;
+  //   `WITH ApproverData AS (
+  //       SELECT
+  //           a.id,
+  //           e.DeptCode,
+  //           e.EmployeeCode,
+  //           a.lvl,
+  //           a.code AS approversCode,
+  //           a.employeeCodes,
+  //           emp.FirstName,
+  //           emp.MiddleInitial,
+  //           emp.LastName,
+  //           CASE
+  //               WHEN ',' + ISNULL(a.employeeCodes, '') + ',' LIKE '%,' + e.EmployeeCode + ',%' THEN 1
+  //               ELSE 0
+  //           END AS isDirectApprover
+  //       FROM
+  //           [UE database]..Employee e
+  //       JOIN
+  //           HR..Approvers a ON e.DeptCode = a.deptCode AND a.deleted = 0
+  //       JOIN
+  //           [UE database]..Employee emp ON a.code = emp.EmployeeCode
+  //       WHERE
+  //           e.EmployeeCode = ?
+  //   )
+  //   SELECT
+  //       DeptCode,
+  //       EmployeeCode,
+  //       lvl,
+  //       approversCode,
+  //       employeeCodes,
+  //       FirstName,
+  //       MiddleInitial,
+  //       LastName
+  //   FROM ApproverData
+  //   WHERE
+  //       isDirectApprover = 1
+  //       OR (
+  //           NOT EXISTS (
+  //               SELECT 1 FROM ApproverData WHERE isDirectApprover = 1
+  //           )
+  //           AND employeeCodes IS NULL
+  //       )
+  //   ORDER BY lvl, LastName
   //     `,
   //   [employeeId],
   // );
@@ -2274,6 +2250,7 @@ const getApproversDetails = async (employeeId) => {
   return await sqlHelper.query(
     `WITH ApproverData AS (
         SELECT 
+            a.id,
             e.DeptCode,
             e.EmployeeCode,
             a.lvl,
@@ -2288,8 +2265,15 @@ const getApproversDetails = async (employeeId) => {
             END AS isDirectApprover
         FROM 
             [UE database]..Employee e
-        JOIN
-            HR..Approvers a ON e.DeptCode = a.deptCode AND a.deleted = 0
+        JOIN HR..Approvers a 
+        ON (
+                (a.employeeCodes IS NOT NULL 
+                AND ',' + ? + ',' LIKE '%,' + e.EmployeeCode + ',%')
+                OR 
+                (a.employeeCodes IS NULL 
+                AND e.DeptCode = a.deptCode)
+          )
+          AND a.deleted = 0
         JOIN
             [UE database]..Employee emp ON a.code = emp.EmployeeCode
         WHERE
@@ -2315,7 +2299,7 @@ const getApproversDetails = async (employeeId) => {
         )
     ORDER BY lvl, LastName
       `,
-    [employeeId],
+    [employeeId, employeeId],
   );
 };
 
@@ -2422,24 +2406,32 @@ const checkYearAttributedCancel = async (leaveId) => {
 const getEmployeeDetails = async (employeeId, activeStatus) => {
   const leaveLedgerDetails = await sqlHelper.query(
     `SELECT  
-            l.leaveType, l.yearAttributed AS Year, SUM(debit - credit) AS remaining, EmployeeCode, 
-            CONCAT(e.LastName, ', ', e.FirstName, ' ', CASE WHEN e.MiddleName IS NOT NULL THEN LEFT(e.MiddleName, 1) + '.' ELSE '' END) AS FullName,
-            DeptDescr, Position
-        FROM (
-            SELECT 
-                EmployeeCode, LastName, FirstName, MiddleName, DeptDescr, Position
-            FROM [UE database]..[view_Employee]
-            WHERE (EmployeeCode = ? OR LastName = ? OR FirstName = ?) AND IsActive = ?
-        ) AS e
-        JOIN 
-            [HR].[dbo].[vw_LeaveCreditsV2] AS l ON e.EmployeeCode = l.Code
-        JOIN 
-            HR..vw_LeaveTypes AS vw ON l.LeaveType = vw.leaveCode
-        GROUP BY 
-            e.EmployeeCode, e.LastName, e.FirstName, e.MiddleName, l.leaveType, l.yearAttributed, vw.leaveDesc, e.DeptDescr, e.Position
-        HAVING SUM(debit - credit) >= 0
-        ORDER BY 
-            l.leaveType, l.yearAttributed    
+        l.leaveType, 
+        l.yearAttributed AS Year, 
+        SUM(ISNULL(debit,0) - ISNULL(credit,0)) AS remaining, 
+        e.EmployeeCode, 
+        CONCAT(
+            e.LastName, ', ', e.FirstName, ' ', 
+            CASE WHEN e.MiddleName IS NOT NULL THEN LEFT(e.MiddleName, 1) + '.' ELSE '' END
+        ) AS FullName,
+        e.DeptDescr, 
+        e.Position
+    FROM (
+        SELECT 
+            CODE EmployeeCode, LastName, FirstName, MiddleName, DEPT_DESC DeptDescr, POS_DESC Position
+        FROM [UE database]..vw_Employees 
+        WHERE (CODE = ? OR LastName = ? OR FirstName = ?) AND IS_ACTIVE = ?
+    ) AS e
+    LEFT JOIN [HR].[dbo].[vw_LeaveCreditsV2] AS l 
+          ON e.EmployeeCode = l.Code
+    LEFT JOIN HR..vw_LeaveTypes AS vw 
+          ON l.LeaveType = vw.leaveCode
+    GROUP BY 
+        e.EmployeeCode, e.LastName, e.FirstName, e.MiddleName, 
+        l.leaveType, l.yearAttributed, vw.leaveDesc, 
+        e.DeptDescr, e.Position
+    ORDER BY 
+        l.leaveType, l.yearAttributed    
         `,
     [employeeId, employeeId, employeeId, activeStatus],
   );

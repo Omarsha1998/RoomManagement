@@ -1,342 +1,43 @@
 const HierarchyModel = require("../models/hierarchyModel");
 const sqlHelper = require("../../../helpers/sql");
 
-// const buildTree = (data) => {
+// const buildHierarchyTree = (data) => {
+//   const levels = {
+//     1: "CorporateOfficer1",
+//     2: "CorporateOfficer2",
+//     3: "Division1",
+//     4: "Division2",
+//     5: "Group",
+//     6: "Department",
+//     7: "Section",
+//     8: "Area",
+//   };
+
+//   const map = {};
 //   const tree = {};
 
 //   for (const item of data) {
-//     if (!item.division && !item.parent) {
-//       if (!tree[item.code]) {
-//         tree[item.code] = {
-//           level: "Department",
-//           code: item.code,
-//           name: item.codeDescription,
-//           children: {},
-//         };
+//     const node = {
+//       code: item.code,
+//       name: item.description || item.code,
+//       level: levels[item.level] || `Level${item.level}`,
+//       children: {},
+//     };
+
+//     map[item.code] = node;
+
+//     if (item.parent) {
+//       if (!map[item.parent]) {
+//         map[item.parent] = { children: {} };
 //       }
-//       continue;
-//     }
-
-//     if (item.division) {
-//       if (!tree[item.division]) {
-//         tree[item.division] = {
-//           level: "Division",
-//           code: item.division,
-//           name: item.divisionDescription,
-//           children: {},
-//         };
-//       }
-//     }
-
-//     const divisionNode = tree[item.division];
-
-//     if (item.group && divisionNode && !divisionNode.children[item.group]) {
-//       divisionNode.children[item.group] = [
-//         {
-//           level: "Group",
-//           code: item.group,
-//           name: item.groupDescription,
-//           children: {},
-//         },
-//       ];
-//     }
-//     const groupNode = item.group
-//       ? divisionNode?.children[item.group][0]
-//       : divisionNode;
-
-//     if (item.department && groupNode && !groupNode.children[item.department]) {
-//       groupNode.children[item.department] = [
-//         {
-//           level: "Department",
-//           code: item.department,
-//           name: item.departmentDescription,
-//           children: {},
-//         },
-//       ];
-//     }
-//     const departmentNode = item.department
-//       ? groupNode?.children[item.department][0]
-//       : groupNode;
-
-//     if (
-//       item.section &&
-//       departmentNode &&
-//       !departmentNode.children[item.section]
-//     ) {
-//       departmentNode.children[item.section] = [
-//         {
-//           level: "Section",
-//           code: item.section,
-//           name: item.sectionDescription,
-//           children: {},
-//         },
-//       ];
-//     }
-//     const sectionNode = item.section
-//       ? departmentNode?.children[item.section][0]
-//       : departmentNode;
-
-//     if (item.area && sectionNode && !sectionNode.children[item.area]) {
-//       sectionNode.children[item.area] = [
-//         {
-//           level: "Area",
-//           code: item.area,
-//           name: item.areaOfAssignment,
-//         },
-//       ];
+//       map[item.parent].children[item.code] = node;
+//     } else {
+//       tree[item.code] = node;
 //     }
 //   }
 
 //   return tree;
 // };
-// const buildTree = (data) => {
-//   const tree = {};
-
-//   for (const item of data) {
-//     if (!item.corporateOfficer && !item.parent) {
-//       if (!tree[item.code]) {
-//         tree[item.code] = {
-//           level: "Department",
-//           code: item.code,
-//           name: item.codeDescription,
-//           children: {},
-//         };
-//       }
-//       continue;
-//     }
-
-//     // Ensure Corporate2 Officer exists
-//     if (item.corporateOfficer) {
-//       if (!tree[item.corporateOfficer]) {
-//         tree[item.corporateOfficer] = {
-//           level: "CorporateOfficer",
-//           code: item.corporateOfficer,
-//           name: item.corporateOfficerDescription,
-//           children: {},
-//         };
-//       }
-//     }
-
-//     const corporateNode = tree[item.corporateOfficer];
-
-//     // Ensure Division1 exists under Corporate Officer
-//     if (item.division1) {
-//       if (!corporateNode.children[item.division1]) {
-//         corporateNode.children[item.division1] = {
-//           level: "Division1",
-//           code: item.division1,
-//           name: item.division1Description,
-//           children: {},
-//         };
-//       }
-//     }
-
-//     const division1Node =
-//       corporateNode.children[item.division1] || corporateNode;
-
-//     // Ensure Division2 exists under Division1
-//     if (item.division2) {
-//       if (!division1Node.children[item.division2]) {
-//         division1Node.children[item.division2] = {
-//           level: "Division2",
-//           code: item.division2,
-//           name: item.division2Description,
-//           children: {},
-//         };
-//       }
-//     }
-
-//     const division2Node =
-//       division1Node.children[item.division2] || division1Node;
-
-//     // Ensure Group exists under Division2
-//     if (item.group) {
-//       if (!division2Node.children[item.group]) {
-//         division2Node.children[item.group] = {
-//           level: "Group",
-//           code: item.group,
-//           name: item.groupDescription,
-//           children: {},
-//         };
-//       }
-//     }
-
-//     const groupNode = division2Node.children[item.group] || division2Node;
-
-//     // Ensure Department exists under Group
-//     if (item.department) {
-//       if (!groupNode.children[item.department]) {
-//         groupNode.children[item.department] = {
-//           level: "Department",
-//           code: item.department,
-//           name: item.departmentDescription,
-//           children: {},
-//         };
-//       }
-//     }
-
-//     const departmentNode = groupNode.children[item.department] || groupNode;
-
-//     // Ensure Section exists under Department
-//     if (item.section) {
-//       if (!departmentNode.children[item.section]) {
-//         departmentNode.children[item.section] = {
-//           level: "Section",
-//           code: item.section,
-//           name: item.sectionDescription,
-//           children: {},
-//         };
-//       }
-//     }
-
-//     const sectionNode = departmentNode.children[item.section] || departmentNode;
-
-//     // Ensure Area exists under Section
-//     if (item.area) {
-//       if (!sectionNode.children[item.area]) {
-//         sectionNode.children[item.area] = {
-//           level: "Area",
-//           code: item.area,
-//           name: item.areaOfAssignment,
-//           children: {},
-//         };
-//       }
-//     }
-//   }
-
-//   return tree;
-// };
-
-const buildTree = (data) => {
-  const tree = {};
-
-  for (const item of data) {
-    // Establish top-most node
-    if (!item.corporateOfficer1 && !item.corporateOfficer2 && !item.parent) {
-      if (!tree[item.code]) {
-        tree[item.code] = {
-          level: "Department",
-          code: item.code,
-          name: item.codeDescription,
-          children: {},
-        };
-      }
-      continue;
-    }
-
-    // Ensure CorporateOfficer1 exists
-    if (item.corporateOfficer1) {
-      if (!tree[item.corporateOfficer1]) {
-        tree[item.corporateOfficer1] = {
-          level: "CorporateOfficer1",
-          code: item.corporateOfficer1,
-          name: item.corporateOfficer1Description,
-          children: {},
-        };
-      }
-    }
-
-    // Ensure CorporateOfficer2 exists under CorporateOfficer1
-    let currentRoot = tree[item.corporateOfficer1];
-
-    if (item.corporateOfficer2) {
-      if (!currentRoot.children[item.corporateOfficer2]) {
-        currentRoot.children[item.corporateOfficer2] = {
-          level: "CorporateOfficer2",
-          code: item.corporateOfficer2,
-          name: item.corporateOfficer2Description,
-          children: {},
-        };
-      }
-      currentRoot = currentRoot.children[item.corporateOfficer2];
-    }
-
-    // Division1 under CorporateOfficer2
-    if (item.division1) {
-      if (!currentRoot.children[item.division1]) {
-        currentRoot.children[item.division1] = {
-          level: "Division1",
-          code: item.division1,
-          name: item.division1Description,
-          children: {},
-        };
-      }
-    }
-
-    const division1Node = currentRoot.children[item.division1] || currentRoot;
-
-    // Division2 under Division1
-    if (item.division2) {
-      if (!division1Node.children[item.division2]) {
-        division1Node.children[item.division2] = {
-          level: "Division2",
-          code: item.division2,
-          name: item.division2Description,
-          children: {},
-        };
-      }
-    }
-
-    const division2Node =
-      division1Node.children[item.division2] || division1Node;
-
-    // Group under Division2
-    if (item.group) {
-      if (!division2Node.children[item.group]) {
-        division2Node.children[item.group] = {
-          level: "Group",
-          code: item.group,
-          name: item.groupDescription,
-          children: {},
-        };
-      }
-    }
-
-    const groupNode = division2Node.children[item.group] || division2Node;
-
-    // Department under Group
-    if (item.department) {
-      if (!groupNode.children[item.department]) {
-        groupNode.children[item.department] = {
-          level: "Department",
-          code: item.department,
-          name: item.departmentDescription,
-          children: {},
-        };
-      }
-    }
-
-    const departmentNode = groupNode.children[item.department] || groupNode;
-
-    // Section under Department
-    if (item.section) {
-      if (!departmentNode.children[item.section]) {
-        departmentNode.children[item.section] = {
-          level: "Section",
-          code: item.section,
-          name: item.sectionDescription,
-          children: {},
-        };
-      }
-    }
-
-    const sectionNode = departmentNode.children[item.section] || departmentNode;
-
-    // Area under Section
-    if (item.area) {
-      if (!sectionNode.children[item.area]) {
-        sectionNode.children[item.area] = {
-          level: "Area",
-          code: item.area,
-          name: item.areaDescription,
-          children: {},
-        };
-      }
-    }
-  }
-
-  return tree;
-};
 
 const buildHierarchyTree = (data) => {
   const levels = {
@@ -350,26 +51,29 @@ const buildHierarchyTree = (data) => {
     8: "Area",
   };
 
+  // First pass: create all nodes
   const map = {};
-  const tree = {};
-
   for (const item of data) {
-    const node = {
+    map[item.code] = {
       code: item.code,
       name: item.description || item.code,
       level: levels[item.level] || `Level${item.level}`,
       children: {},
+      parent: item.parent,
     };
+  }
 
-    map[item.code] = node;
+  // Second pass: build the tree
+  const tree = {};
+  for (const code in map) {
+    const node = map[code];
+    const parentCode = node.parent;
+    delete node.parent; // Clean up temporary property
 
-    if (item.parent) {
-      if (!map[item.parent]) {
-        map[item.parent] = { children: {} };
-      }
-      map[item.parent].children[item.code] = node;
+    if (parentCode && map[parentCode]) {
+      map[parentCode].children[code] = node;
     } else {
-      tree[item.code] = node;
+      tree[code] = node;
     }
   }
 
@@ -383,6 +87,7 @@ const getHiearchy = async (req, res) => {
   if (!request) return res.status(500).json(null);
   // const tree = buildTree(request);
   const tree = buildHierarchyTree(rawData);
+
   return res.status(200).json({ tree, rawData });
 };
 
@@ -438,36 +143,118 @@ const checkDeptData = async (req, res) => {
   res.status(200).json({ body: `${hierarchyText}` });
 };
 
+const updateChildrenLevels = async (
+  parentCode,
+  levelDifference,
+  updater,
+  txn,
+  depth = 0,
+) => {
+  const children = await HierarchyModel.getChildrenByParent(parentCode, txn);
+
+  if (!children || children.length === 0) {
+    return;
+  }
+
+  for (const child of children) {
+    const oldLevel = child.level;
+    const newLevel = oldLevel + levelDifference;
+
+    await HierarchyModel.setNewHierarchy(
+      {
+        level: newLevel,
+        UpdatedBy: updater,
+      },
+      { Code: child.code },
+      txn,
+      "DateTimeUpdated",
+    );
+
+    await updateChildrenLevels(
+      child.Code,
+      levelDifference,
+      updater,
+      txn,
+      depth + 1,
+    );
+  }
+};
+
 const setHierarchyData = async (department, parent, level, updater) => {
   const check = await HierarchyModel.checkDuplicate(department);
+
   const updateInsert = await sqlHelper.transact(async (txn) => {
-    if (check && check.length > 0) {
-      return await HierarchyModel.setNewHierarchy(
+    const existingDept = check && check.length > 0 ? check[0] : null;
+    const oldLevel = existingDept ? existingDept.level : null;
+
+    let result;
+    if (existingDept) {
+      result = await HierarchyModel.setNewHierarchy(
         {
           parent: parent,
           level: level,
           UpdatedBy: updater,
+          Deleted: 0,
         },
         { Code: department },
         txn,
         "DateTimeUpdated",
       );
+    } else {
+      result = await HierarchyModel.insertNewHierarchy(
+        {
+          Code: department,
+          level: level,
+          parent: parent,
+          UpdatedBy: updater,
+        },
+        txn,
+        "DateTimeUpdated",
+      );
     }
 
-    return await HierarchyModel.insertNewHierarchy(
-      {
-        Code: department,
-        level: level,
-        parent: parent,
-        UpdatedBy: updater,
-      },
-      txn,
-      "DateTimeUpdated",
-    );
+    if (oldLevel !== null && oldLevel !== level) {
+      const levelDifference = level - oldLevel;
+      await updateChildrenLevels(department, levelDifference, updater, txn);
+    }
+
+    return result;
   });
 
   return updateInsert;
 };
+
+// const setHierarchyData = async (department, parent, level, updater) => {
+//   const check = await HierarchyModel.checkDuplicate(department);
+//   const updateInsert = await sqlHelper.transact(async (txn) => {
+//     if (check && check.length > 0) {
+//       return await HierarchyModel.setNewHierarchy(
+//         {
+//           parent: parent,
+//           level: level,
+//           UpdatedBy: updater,
+//           Deleted: false,
+//         },
+//         { Code: department },
+//         txn,
+//         "DateTimeUpdated",
+//       );
+//     }
+
+//     return await HierarchyModel.insertNewHierarchy(
+//       {
+//         Code: department,
+//         level: level,
+//         parent: parent,
+//         UpdatedBy: updater,
+//       },
+//       txn,
+//       "DateTimeUpdated",
+//     );
+//   });
+
+//   return updateInsert;
+// };
 
 // const setNewHierarchy = async (req, res) => {
 //   const updater = req.user.employee_id;
@@ -910,9 +697,68 @@ const setNewHierarchy = async (req, res) => {
   });
 };
 
+const addHierarchy = async (req, res) => {
+  const loggedUser = req.user.employee_id;
+  const { code, parent, level } = req.body;
+
+  const result = await setHierarchyData(code, parent, level, loggedUser);
+
+  if (!result)
+    return res.status(500).json({ message: "Failed to add hierarchy" });
+
+  res.status(200).json({
+    message: "Hierarchy added successfully",
+  });
+};
+
+const removeHierarchy = async (req, res) => {
+  const { code } = req.body;
+  const loggedUser = req.user.employee_id;
+
+  const updateStatus = await sqlHelper.transact(async (txn) => {
+    const deletedMain = await HierarchyModel.updateHierarchy(
+      {
+        Deleted: 1,
+        UpdatedBy: loggedUser,
+        Parent: null,
+      },
+      { Code: code },
+      txn,
+      "DateTimeUpdated",
+    );
+
+    const deletedChildren = await HierarchyModel.updateHierarchy(
+      {
+        Parent: null,
+        UpdatedBy: loggedUser,
+      },
+      { Parent: code },
+      txn,
+      "DateTimeUpdated",
+    );
+
+    return {
+      main: deletedMain,
+      children: deletedChildren,
+    };
+  });
+
+  if (!updateStatus) {
+    return res
+      .status(500)
+      .json({ message: `Failed to remove hierarchy for code ${code}` });
+  }
+
+  res.status(200).json({
+    message: `Hierarchy ${code} and its children updated successfully`,
+  });
+};
+
 module.exports = {
   getHiearchy,
   getDepartments,
   checkDeptData,
   setNewHierarchy,
+  addHierarchy,
+  removeHierarchy,
 };

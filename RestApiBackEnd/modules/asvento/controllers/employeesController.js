@@ -34,6 +34,36 @@ const getActiveEmployeesOnly = async function (req, res) {
   }
 };
 
+const getActiveEmployeesOnlyNoDept = async function (req, res) {
+  try {
+    const returnValue = await sqlHelper.transact(async (txn) => {
+      // if (util.empty(req.query.transferFormNo))
+      //   return res.status(400).json({ error: "`Transfer Form Number` is required." });
+
+      const directAccountable = req.query.directAccountable;
+
+      let sqlWhere = "";
+      // const userDepartmentCode = util.currentUserToken(req).deptCode
+      let args = [];
+      sqlWhere = ` and  code = ? and is_active = ? `;
+      args = [directAccountable, 1];
+      const options = {
+        top: "",
+        order: "",
+      };
+      return await employees.getActiveEmployees(sqlWhere, args, options, txn);
+    });
+
+    if (returnValue.error !== undefined) {
+      return res.status(500).json({ error: `${returnValue.error}` });
+    }
+    return res.json(returnValue);
+  } catch (error) {
+    return res.json(error);
+  }
+};
+
 module.exports = {
   getActiveEmployeesOnly,
+  getActiveEmployeesOnlyNoDept,
 };

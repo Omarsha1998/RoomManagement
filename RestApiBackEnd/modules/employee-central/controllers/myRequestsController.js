@@ -85,7 +85,8 @@ const getAllProvinces = async (req, res) => {
 const getAllCitiesOrMunicipalities = async (req, res) => {
   try {
     const { requestDtlID } = req.query;
-    const response = await myRequestsModel.getAllCitiesOrMunicipalities(requestDtlID);
+    const response =
+      await myRequestsModel.getAllCitiesOrMunicipalities(requestDtlID);
     return res.status(200).json(response);
   } catch (error) {
     return res
@@ -186,7 +187,10 @@ const getAllMajors = async (req, res) => {
 // @access  Private
 const deleteRequest = async (req, res) => {
   try {
-    await myRequestsModel.deleteRequest(req.params.employee_id, req.body.requestID);
+    await myRequestsModel.deleteRequest(
+      req.params.employee_id,
+      req.body.requestID,
+    );
     return res.status(200).json("Successfully deleted.");
   } catch (error) {
     return res
@@ -211,5 +215,5 @@ module.exports = {
   getAllDegrees,
   getAllCourses,
   getAllMajors,
-  deleteRequest
+  deleteRequest,
 };

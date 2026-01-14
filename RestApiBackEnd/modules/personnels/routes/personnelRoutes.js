@@ -14,6 +14,7 @@ router.get(
 );
 
 router.get("/sections", validateAccessToken, personnelController.getSections);
+// router.get("/test", personnelController.updateDoctors);
 
 router.get("/app-users", validateAccessToken, personnelController.getAppUsers);
 router.get("/picture/:id", personnelController.getFilePicture);

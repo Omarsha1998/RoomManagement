@@ -18,6 +18,12 @@ const cookieParser = require("cookie-parser");
 const fileUpload = require("express-fileupload");
 const { logError } = require("./helpers/util.js");
 
+// ============ ADD CLAMAV IMPORT ============
+const {
+  initClamAV,
+} = require("./modules/employee-central/controllers/announcementController.js"); // Adjust path to your controller
+// ===========================================
+
 const prodDbConfig = require("./config/databaseConfig.js");
 const testDbConfig = require("./config/databaseTestingConfig.js");
 const diagDbConfig = require("./config/diagnosticDatabase.js");
@@ -54,11 +60,20 @@ const port = devMode
     await db.addConn("eclaims", devMode ? eClaimsConfigTest : eClaimsConfig);
   } catch (error) {
     await logError(error);
-
     // eslint-disable-next-line no-console
     console.log(
       "Unable to connect to the EasyClaims server. CF4 data dumping may fail.",
     );
+  }
+
+  console.log("Initializing ClamAV virus scanner...");
+  const clamAvReady = await initClamAV();
+
+  if (!clamAvReady) {
+    console.warn("⚠️  WARNING: ClamAV is NOT available!");
+    console.warn("⚠️  File uploads will be rejected for security.");
+  } else {
+    console.log("✅ ClamAV virus scanner ready");
   }
 
   const app = express();
@@ -81,15 +96,17 @@ const port = devMode
     "http://local.uerm.edu.ph",
     "http://20.14.20.231",
     "http://10.107.5.253",
-    // // "http://10.107.0.10:8082",
+    "http://10.107.15.171",
+
+    // "http://10.107.0.10:8081",
     // "http://10.107.0.10:9000",
     // "http://10.107.0.10:9001",
-    // // "http://10.107.0.10:8083",
+    // "http://10.107.0.10:8083",
     // "http://10.107.0.10:8081",
     // "http://10.107.0.10:8080",
     // "http://10.107.0.10:9003",
     // "http://10.107.0.10:9002",
-    // // "http://10.107.0.10:8081",
+    // "http://10.107.0.10:8081",
     // "http://10.107.0.10:8082",
     "http://10.107.0.11:9000",
   ];

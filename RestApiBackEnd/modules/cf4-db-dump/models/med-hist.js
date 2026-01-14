@@ -215,7 +215,7 @@ const selectFamMedHist = async (patientCode, conn) => {
   };
 };
 
-const insert = async (
+const upsert = async (
   userCode,
   patientCode,
   forPatient,
@@ -256,5 +256,5 @@ module.exports = {
   columnsMap,
   selectMedHist,
   selectFamMedHist,
-  insert,
+  upsert,
 };

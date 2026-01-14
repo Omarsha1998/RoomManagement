@@ -376,12 +376,13 @@ const getDoctors = async ({
             STRING_AGG(
                 dcs.Day + ' - (' +
                 REPLACE(RIGHT(CONVERT(VARCHAR(20), dcs.TimeFrom, 100), 7), ' ', '') + ' to ' +
-                REPLACE(RIGHT(CONVERT(VARCHAR(20), dcs.TimeTo, 100), 7), ' ', '') + ') - ' +
-                dct.Name,
+                REPLACE(RIGHT(CONVERT(VARCHAR(20), dcs.TimeTo, 100), 7), ' ', '') + ')' +
+                ISNULL(' - ' + dct.Name, ''),
                 ', '
             ) AS DoctorSchedule
         FROM UERMMMC..DoctorConsultationSchedules dcs
-		LEFT JOIN UERMMMC..DoctorConsultationTypes dct ON dcs.ConsultationTypeCode = dct.Code
+		    LEFT JOIN UERMMMC..DoctorConsultationTypes dct ON dcs.ConsultationTypeCode = dct.Code
+        WHERE dcs.Active = 1
         GROUP BY dcs.DoctorCode
     ),
     DoctorDeptSpecialty AS (
@@ -425,11 +426,16 @@ const getDoctors = async ({
           dr.[MIDDLE NAME] middleName,
           dr.Suffix,
           dr.LIC,
+		  dr.[LIC EXP DATE] licenseExpirationDate,
           dr.PHIC,
+		  dr.[PHIC EXP DATE] philHealthExpirationDate,
           dr.CONTACTNOS,
           dr.DEPARTMENT,
           dr.SKED,
           dr.SCHED,
+		  TRIM(dr.TIN) tinNumber,
+		  TRIM(dr.MPN1) doctorMobile,
+		  TRIM(dr.MPN2) doctorMobile2,
           dr.ROOM,
           dr.DOC_CLASS,
           dr.SERVICE_TYPE,
@@ -476,7 +482,7 @@ const getDoctors = async ({
           dr.[AREA OF SPECIALTY], dr.SPECIALTY, dr.SUB_SPECIALTY, dr.DEPARTMENT, ra.DoctorCode, ra.DateTimeIn, ra.DateTimeOut, ra.id,
           sched.DoctorSchedule, dr.[FIRST NAME], dr.[LAST NAME], dr.[MIDDLE NAME], 
           specDept.Department, specDept.Specialties, specDept.DepartmentCodes, specDept.SpecialtyCodes, md.name,
-          dr.suffix
+          dr.suffix, dr.TIN, dr.MPN1, dr.MPN2, dr.[PHIC EXP DATE], dr.[LIC EXP DATE]
     )
 
     SELECT bd.*
@@ -624,8 +630,7 @@ const getDoctorsDepartment = async () => {
   // );
 
   return await sqlHelper.query(
-    `WITH MedicalDept AS (
-        SELECT 
+    `SELECT 
             CASE 
                 WHEN Name = 'Otorhinolaryngology' THEN 'ENT' 
                 WHEN Name = 'Trauma' AND Code = 'SURG-TRAUMA' THEN 'Surgery Trauma'
@@ -635,12 +640,7 @@ const getDoctorsDepartment = async () => {
             Code AS value
         FROM UERMMMC..MedicalDepartments
         WHERE Code NOT IN ('UEDEN', 'EMED') 
-    )
 
-    SELECT 
-        md.label,
-        md.value
-    FROM MedicalDept md
     `,
   );
 };
@@ -799,7 +799,7 @@ const updateDoctorAssignment = async (
   );
 };
 
-const checkLogDoctorAssignment = async (doctorCode, secretaryCode) => {
+const checkLogDoctorAssignment = async (doctorCode, secretaryCode, txn) => {
   return await sqlHelper.query(
     `SELECT *
     FROM
@@ -807,6 +807,7 @@ const checkLogDoctorAssignment = async (doctorCode, secretaryCode) => {
     WHERE SecretaryCode = ? AND DoctorCode = ?
     `,
     [secretaryCode, doctorCode],
+    txn,
   );
 };
 
@@ -893,13 +894,14 @@ const doctorSchedule = async (doctorCode) => {
         dc.TimeFrom,
         dc.TimeTo,
         dc.Remarks,
-        dct.name ConsultationTypeDesc
+        dct.name ConsultationTypeDesc,
+        dc.Active
     FROM 
         UERMMMC..DoctorConsultationSchedules dc
 	  LEFT JOIN
 		UERMMMC..DoctorConsultationTypes dct ON dc.ConsultationTypeCode = dct.Code
     WHERE 
-        DoctorCode = ?;
+        DoctorCode = ? and Active = 1;
     `,
     [doctorCode],
   );
@@ -1055,6 +1057,46 @@ const insertSchedule = async (item, txn, creationDateTimeField) => {
   );
 };
 
+const doctorSecretaries = async (doctorEhrCode) => {
+  return await sqlHelper.query(
+    `SELECT 
+      ds.id,
+      ds.SecretaryCode,
+      ds.DoctorCode,
+      d.NickName,
+      d.ContactNumber,
+      d.ContactNumber2
+    FROM UERMMMC..DoctorSecretaryAssignments ds
+    LEFT JOIN UERMMMC..DoctorSecretaries d ON ds.SecretaryCode = d.Code
+    WHERE ds.DoctorCode = ? and ds.IsDeleted != 1
+    `,
+    [doctorEhrCode],
+  );
+};
+
+const updateSecretary = async (item, condition, txn, updateTimeField) => {
+  return await sqlHelper.update(
+    "UERMMMC..DoctorSecretaries",
+    item,
+    condition,
+    txn,
+    updateTimeField,
+  );
+};
+
+const secretaries = async () => {
+  return await sqlHelper.query(
+    `SELECT 
+      Code,
+      NickName
+    FROM 
+      UERMMMC..DoctorSecretaries
+    WHERE IsActive = 1 and Code != 'Admin'
+    ORDER BY NickName ASC
+    `,
+  );
+};
+
 module.exports = {
   insertImageBase64,
   getServices,
@@ -1096,4 +1138,7 @@ module.exports = {
   insertContact,
   updateContact,
   insertSchedule,
+  doctorSecretaries,
+  updateSecretary,
+  secretaries,
 };

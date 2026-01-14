@@ -325,6 +325,26 @@ router.get(
   validateAccessToken,
   AnnouncementController.getAnnouncements,
 );
+router.post(
+  `${controllerName}/setTraining`,
+  validateAccessToken,
+  AnnouncementController.setTraining,
+);
+router.get(
+  `${controllerName}/eventsInCalendar`,
+  validateAccessToken,
+  AnnouncementController.eventsInCalendar,
+);
+router.post(
+  `${controllerName}/removeSetSchedule`,
+  validateAccessToken,
+  AnnouncementController.removeSetSchedule,
+);
+router.post(
+  `${controllerName}/updateSetSchedule`,
+  validateAccessToken,
+  AnnouncementController.updateSetSchedule,
+);
 //Announcement
 
 //DTR
@@ -339,6 +359,42 @@ router.get(
   validateAccessToken,
   DTRController.noDtrEmployee,
 );
+
+router.get(
+  `${controllerName}/employeeClass`,
+  validateAccessToken,
+  DTRController.employeeClass,
+);
+router.get(
+  `${controllerName}/searchDtr`,
+  validateAccessToken,
+  DTRController.searchDtr,
+);
+router.get(
+  `${controllerName}/residentFaculty`,
+  validateAccessToken,
+  DTRController.residentFaculty,
+);
+router.post(
+  `${controllerName}/dtrPosting`,
+  validateAccessToken,
+  DTRController.dtrPosting,
+);
+router.post(
+  `${controllerName}/finalizeTImeData`,
+  validateAccessToken,
+  DTRController.finalizeTImeData,
+);
+router.post(
+  `${controllerName}/saveTimeData`,
+  validateAccessToken,
+  DTRController.saveTimeData,
+);
+// router.get(`${controllerName}/manualUploadDtr`, DTRController.manualUploadDtr);
+// (async () => {
+//   await DTRController.manualUploadDtr();
+// })();
+
 //DTR
 
 //Leave
@@ -593,6 +649,16 @@ router.post(
   validateAccessToken,
   Hierarchy.setNewHierarchy,
 );
+router.post(
+  `${controllerName}/addHierarchy`,
+  validateAccessToken,
+  Hierarchy.addHierarchy,
+);
+router.post(
+  `${controllerName}/removeHierarchy`,
+  validateAccessToken,
+  Hierarchy.removeHierarchy,
+);
 //Hierarchy
 
 //EmployeeDetails
@@ -685,6 +751,11 @@ router.post(
   `${controllerName}/approveRejectAccomplishment`,
   validateAccessToken,
   OvertimeModule.approveRejectAccomplishment,
+);
+router.get(
+  `${controllerName}/unpaidOvertime`,
+  validateAccessToken,
+  OvertimeModule.unpaidOvertime,
 );
 //OvertimeModule
 

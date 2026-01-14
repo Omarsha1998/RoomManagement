@@ -1,6 +1,7 @@
 const util = require("../../helpers/util.js");
 const sqlHelper = require("../../helpers/sql.js");
 const appHelper = require("./utils/appHelpers.js");
+const tools = require("../../helpers/tools");
 
 // MODELS //
 const interviewerModel = require("../../models/admission/interviewerModel.js");
@@ -218,9 +219,55 @@ const putApplicantAppointment = async function (req, res) {
           await appHelper.transferGCalendar({
             googleCalendarID: applicantAppointments.googleCalendarID,
             googleCalendarEventID: applicantAppointments.googleCalendarEventID,
-            destination: "dev.it@uerm.edu.ph", // LIVE
-            // destination: "it@uerm.edu.ph",
+            destination: interviewerDetails[0].email.includes("uerm.edu.ph")
+              ? interviewerDetails[0].email
+              : "admission@uerm.edu.ph", // LIVE
           });
+
+          req.body.googleCalendarID = interviewerDetails[0].email.includes(
+            "uerm.edu.ph",
+          )
+            ? interviewerDetails[0].email
+            : "admission@uerm.edu.ph";
+
+          const tokenBearerSMS = await util.getTokenSMS();
+          const accessToken = tokenBearerSMS.accessToken;
+
+          const intervieweeContent = `Good day <strong>${interviewerDetails[0].firstName}</strong>, 
+                                          <p>
+                                          An applicant for interview was assigned to you, please see the details of the interview:
+                                          </p>
+                                          <p>
+                                            <ul>
+                                              <li>Google Calendar Event: <a href='${applicantAppointments.googleCalendarLink}' target="_blank">${applicantAppointments.googleCalendarLink}</a> </li>
+                                              <li>Google Meet Link: <a href='${applicantAppointments.googleMeetLink}' target="_blank">${applicantAppointments.googleMeetLink}</a> </li>
+                                              <li>Admissions Interview Module: <a href='https://uerm.edu.ph/apps/admission-interviewer/#/' target="_blank">https://uerm.edu.ph/apps/admission-interviewer/#/</a> </li>
+                                            </ul>
+                                          </p>
+                                        `;
+
+          // NOTIFY INTERVIEWEE //
+
+          const intervieweeSMSMessage = {
+            messageType: "sms",
+            destination: interviewerDetails[0].mobileNumber,
+            app: "UERM STUDENT ADMISSION - INTERVIEW",
+            text: `UERM ADMISSIONS ADVISORY\r\n\r\nAn applicant for interview was assigned to you. Please access the Interviewer Module.\r\n\r\n Thank you.`,
+          };
+
+          await tools.sendSMSInsertDB(accessToken, intervieweeSMSMessage);
+
+          const intervieweeEmailContent = {
+            emailSender: "admission@uerm.edu.ph",
+            header: "UERM ADMISSIONS ADVISORY",
+            subject: "UERM ADMISSIONS ADVISORY - INTERVIEW",
+            content: intervieweeContent,
+            email: interviewerDetails[0].email,
+            name: `${interviewerDetails[0].fullName}`,
+          };
+
+          await util.sendEmail(intervieweeEmailContent);
+          return applicantAppointments;
         } catch (err) {
           console.log(err);
           throw err;
@@ -228,6 +275,8 @@ const putApplicantAppointment = async function (req, res) {
       }
 
       return applicantAppointments;
+
+      // return true;
     } catch (error) {
       console.log(error);
       return { error: error };

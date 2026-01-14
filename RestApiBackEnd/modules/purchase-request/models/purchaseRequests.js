@@ -25,6 +25,53 @@ const selectPurchaseRequestTypes = async function (conditions, txn, options) {
   );
 };
 
+const selectStatus = async function (conditions, txn, options) {
+  return await sqlHelper.query(
+    `SELECT
+        ${util.empty(options.top) ? "" : `TOP(${options.top})`}
+        code,
+        description,
+        color,
+        completion,
+        active,
+        dateTimeCreated,
+        dateTimeUpdated,
+        remarks
+      from UERMINV..PRStatus
+      WHERE 1=1 ${conditions}
+      ${util.empty(options.order) ? "" : `order by ${options.order}`}
+      `,
+    [],
+    txn,
+  );
+};
+
+const selectPRItemCat = async function (conditions, args, options, txn) {
+  try {
+    const rows = await sqlHelper.query(
+      `SELECT distinct
+      ${util.empty(options.top) ? "" : `TOP(${options.top})`}
+      case when c.name is null 
+        then 'NO CATEGORY - NO SUBCATEGORY'
+        else c.name 
+      end category
+      from UERMINV..PurchaseRequestItems a
+      join UERMMMC..Phar_items b on b.itemCode = a.ItemCode collate SQL_Latin1_General_CP1_CI_AS
+      left join UERMINV..ItemCategory d on d.CategoryCode = b.ActionCategoryCode  collate SQL_Latin1_General_CP1_CI_AS
+      left join UERMINV..ItemSubcategories c on c.categoryCode = b.InternalCategoryCode collate SQL_Latin1_General_CP1_CI_AS and c.code = b.ActionCategoryCode collate SQL_Latin1_General_CP1_CI_AS
+      WHERE 1=1  ${conditions}
+    ${util.empty(options.order) ? "" : `order by ${options.order}`}
+    `,
+      args,
+      txn,
+    );
+
+    return rows;
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 const selectPurchaseRequests = async function (conditions, txn, options) {
   const purchaseRequests = await sqlHelper.query(
     `SELECT
@@ -51,16 +98,48 @@ const selectPurchaseRequests = async function (conditions, txn, options) {
         dateTimeCompleted,
         dateTimeCreated,
         dateTimeUpdated,
-        dateTimeRejected
-      from UERMINV..PurchaseRequests
-      WHERE 1=1 ${conditions}
+        dateTimeRejected,
+        case when (select count(prcode) from UERMINV..PurchaseRequestItems where prCode = code and (pono is not null or pono <> '')) > 0
+          then cast (1 as bit)
+        else cast(0 as bit)
+        end hasPO,
+        case when (select count(prCode) from UERMINV..PurchaseRequestItems b where b.prCode = code and b.status = 11) > 0
+          then cast (1 as bit)
+        else cast(0 as bit)
+        end hasIssuance,
+        (SELECT 
+          STRING_AGG(name, ', ') AS cat
+        FROM (
+          SELECT DISTINCT
+            case when c.name is null 
+              then 'NO CATEGORY - NO SUBCATEGORY'
+            else 
+              -- c.name
+              case when b.InternalCategoryCode = 10
+                then concat('MEDICINES - ', c.name)
+                else c.name 
+              end
+            end name,
+            prCode
+            FROM UERMINV..PurchaseRequestItems a
+            JOIN UERMMMC..Phar_items b 
+                ON b.itemCode = a.ItemCode COLLATE SQL_Latin1_General_CP1_CI_AS
+            LEFT JOIN UERMINV..ItemCategory d 
+                ON d.CategoryCode = b.ActionCategoryCode COLLATE SQL_Latin1_General_CP1_CI_AS
+            LEFT JOIN UERMINV..ItemSubcategories c 
+                ON c.categoryCode = b.InternalCategoryCode COLLATE SQL_Latin1_General_CP1_CI_AS 
+              AND c.code = b.ActionCategoryCode COLLATE SQL_Latin1_General_CP1_CI_AS
+        ) AS distinct_cats WHERE prCode = a.code) itemCategories
+
+      from UERMINV..PurchaseRequests a
+      WHERE 1=1 and active = 1 ${conditions}
       ${util.empty(options.order) ? "" : `order by ${options.order}`}
       `,
     [],
     txn,
   );
-
   if (purchaseRequests.length > 0) {
+    // for (const list of purchaseRequests) {
     purchaseRequests.forEach((list) => {
       list.formattedDateNeeded = util.formatDate2({
         date: list.dateNeeded,
@@ -68,44 +147,104 @@ const selectPurchaseRequests = async function (conditions, txn, options) {
       });
       list.dateTimeCreated = util.formatDate2({
         date: list.dateTimeCreated,
-        withDayNameWithTime: true,
       });
       list.dateTimeUpdated = util.formatDate2({
         date: list.dateTimeUpdated,
-        withDayNameWithTime: true,
       });
 
       if (list.approvedBy !== null) {
         list.dateTimeApproved = util.formatDate2({
           date: list.dateTimeApproved,
-          withDayNameOnly: true,
         });
       }
 
       if (list.reviewedBy !== null) {
         list.dateTimeReviewed = util.formatDate2({
           date: list.dateTimeReviewed,
-          withDayNameWithTime: true,
         });
       }
 
       if (list.rejectedBy !== null) {
         list.dateTimeRejected = util.formatDate2({
           date: list.dateTimeRejected,
-          withDayNameWithTime: true,
         });
       }
 
-      if (list.completedBy !== null) {
+      if (list.dateTimeCompleted !== null) {
         list.dateTimeCompleted = util.formatDate2({
           date: list.dateTimeCompleted,
-          withDayNameWithTime: true,
         });
       }
     });
+    // }
   }
 
+  // console.log(purchaseRequests);
+
   return purchaseRequests;
+};
+
+const selectWarehouseDepartmentItems = async function (
+  conditions,
+  args,
+  options,
+  txn,
+) {
+  const departmentItems = await sqlHelper.query(
+    `SELECT
+        ${util.empty(options.top) ? "" : `TOP(${options.top})`}
+        b.id,
+        b.prCode, 
+        a.dateNeeded, 
+        b.itemCode, 
+        b.name, 
+        b.description, 
+        b.others, 
+        b.otherDescription, 
+        b.unit, 
+        b.quantity, 
+        b.AlQty allottedQuantity, 
+        b.alno allotmentNumber, 
+        pit.internalCategoryCode,
+        pit.actionCategoryCode,
+        a.status rivStatus,
+        b.status, 
+        case when b.status = 11 then cast (1 as bit) else cast (0 as bit) end hasIssuance,
+        b.dateTimeCreated, 
+        b.dateTimeUpdated
+      from 
+        UERMINV..PurchaseRequests a 
+        join UERMINV..PurchaseRequestItems b on b.prCode = a.code and b.status <> 0
+        left join UERMMMC..Phar_items pit on pit.itemCode = b.itemCode collate SQL_Latin1_General_CP1_CI_AS
+        and b.status <> 0 
+        and b.active = 1 
+      where 1=1  ${conditions}
+      ${util.empty(options.order) ? "" : `order by ${options.order}`}
+      `,
+    args,
+    txn,
+  );
+
+  if (departmentItems.length > 0) {
+    // for (const list of departmentItems) {
+    departmentItems.forEach((list) => {
+      list.formattedDateNeeded = util.formatDate2({
+        date: list.dateNeeded,
+        withDayNameOnly: true,
+      });
+      list.dateTimeCreated = util.formatDate2({
+        date: list.dateTimeCreated,
+        straightDateWithTime: true,
+      });
+      list.dateTimeUpdated = util.formatDate2({
+        date: list.dateTimeUpdated,
+        straightDateWithTime: true,
+      });
+    });
+    // }
+  }
+
+  return departmentItems;
 };
 
 const selectPurchaseRequestsWithPO = async function (
@@ -162,6 +301,7 @@ const selectPurchaseRequestsWithPO = async function (
     return rows;
   } catch (error) {
     console.log(error);
+    return error;
   }
 };
 
@@ -198,10 +338,13 @@ const updatePurchaseRequest = async function (payload, condition, txn) {
 };
 
 module.exports = {
+  selectStatus,
   selectPurchaseRequests,
   insertPurchaseRequests,
   insertPRApprovals,
   updatePurchaseRequest,
   selectPurchaseRequestTypes,
   selectPurchaseRequestsWithPO,
+  selectPRItemCat,
+  selectWarehouseDepartmentItems,
 };

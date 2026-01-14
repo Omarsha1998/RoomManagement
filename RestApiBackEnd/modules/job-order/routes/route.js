@@ -340,7 +340,7 @@ router.get(
 
 router.get(
   "/departments-live",
-  validateAccessToken,
+  // validateAccessToken,
   departmentsController.getLiveDepartments,
 );
 

@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable no-console */
 // const express = require("express");
 // const router = express.Router();
@@ -15,7 +16,7 @@ const api = {
 // MailJet login creds
 // user: service-notification@uerm.edu.ph
 // pass: Friday90210@
-const mailjet = require("node-mailjet").connect(api.apiKey, api.secretKey);
+const mailjet = require("node-mailjet").apiConnect(api.apiKey, api.secretKey);
 
 const util = require("../helpers/util");
 // const sqlHelper = require("../helpers/sql");
@@ -45,7 +46,7 @@ const sendResidents = function (req, res) {
     res.send({ error: "Default password required!" });
     return;
   }
-  console.log(`Sending Email: ${req.query.email}`);
+  // console.log(`Sending Email: ${req.query.email}`);
 
   const request = mailjet.post("send", { version: "v3.1" }).request({
     Messages: [
@@ -78,7 +79,7 @@ const sendResidents = function (req, res) {
 
   request
     .then((result) => {
-      console.log(result.body);
+      // console.log(result.body);
       res.send({ success: result.body });
     })
     .catch((err) => {
@@ -132,7 +133,7 @@ const sendAppRegistration = function (req, res) {
 
   request
     .then((result) => {
-      console.log(result.body);
+      // console.log(result.body);
       res.send({ success: result.body });
     })
     .catch((err) => {
@@ -203,7 +204,7 @@ const sendForgotPassword = function (req, res) {
 
       request
         .then((result) => {
-          console.log(result.body);
+          // console.log(result.body);
           res.send({ success: result.body });
         })
         .catch((err) => {
@@ -268,12 +269,69 @@ const sendDynamicSMS = async function (req, res) {
         smsMessage,
         true,
       );
-      console.log(smsStatus);
+      // console.log(smsStatus);
       return { success: true };
     } catch (error) {
       console.log(error);
       return { error: error };
     }
+  })();
+
+  if (returnValue.error !== undefined) {
+    return res.status(500).json({ error: `${returnValue.error}` });
+  }
+  return res.json(returnValue);
+};
+
+const sendFluidEmail = async function (req, res) {
+  if (util.empty(req.body))
+    return res.status(400).json({ error: "Body is required." });
+  console.log(req.body);
+  const returnValue = await (async () => {
+    return true;
+    // try {
+    //   // Messages: [
+    //   //   {
+    //   //     From: {
+    //   //       Email: email.senderEmail ?? "service-notification@uerm.edu.ph",
+    //   //       Name: email.senderName ?? "UERM Service Notification",
+    //   //     },
+    //   //     To: [
+    //   //       {
+    //   //         Email: `${email.address ?? email.email}`,
+    //   //         Name: `${email.name}`,
+    //   //       },
+    //   //     ],
+    //   //     TemplateID: email.templateId ?? 4088864,
+    //   //     TemplateLanguage: true,
+    //   //     Subject: `${email.subject}`,
+    //   //     Variables: {
+    //   //       ehrHeader: `${email.header}`,
+    //   //       ehrContent: `${email.content}`,
+    //   //     },
+    //   //     Attachments: email.attachments || [],
+    //   //   },
+    //   // ],
+    //   const emailDetails = req.body;
+    //   const emailContent = {
+    //     senderEmail:
+    //       emailDetails.emailSender ?? "service-notification@uerm.edu.ph",
+    //     header: emailDetails.header,
+    //     subject: emailDetails.subject,
+    //     content: emailDetails.body,
+    //     email: emailDetails.email,
+    //     name: emailDetails.name,
+    //     variables: {
+    //       name: emailDetails.name,
+    //       amount: emailDetails.amount,
+    //     },
+    //   };
+    //   await util.sendDynamicEmail(emailContent);
+    //   return { success: true };
+    // } catch (error) {
+    //   console.log(error);
+    //   return { error: error };
+    // }
   })();
 
   if (returnValue.error !== undefined) {
@@ -288,4 +346,5 @@ module.exports = {
   sendForgotPassword,
   sendDynamicEmail,
   sendDynamicSMS,
+  sendFluidEmail,
 };

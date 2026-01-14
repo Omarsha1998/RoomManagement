@@ -20,6 +20,7 @@ const getPersonalInfoDocuments = async function (
       college,
       status,
       notified,
+      semester,
       active,
       dateTimeCreated, 
       dateTimeUpdated

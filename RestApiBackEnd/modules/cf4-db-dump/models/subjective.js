@@ -105,7 +105,7 @@ for (const column of columns) {
 
 const columnsMap = buildHashTable(columns, "name");
 
-const insert = async (userCode, consultationId, item, txn) => {
+const upsert = async (userCode, consultationId, item, txn) => {
   const row = db.createRow(item, columns);
 
   // USE CHIEF COMPLAINT IF SIGNS AND SYMPTOMS AND OTHER COMPLAINT ARE NOT AVAILABLE
@@ -130,5 +130,5 @@ module.exports = {
   table: tableName,
   columns,
   columnsMap,
-  insert,
+  upsert,
 };

@@ -8,8 +8,8 @@ const helpers = require("../helpers/helpers");
 const sqlHelper = require("../helpers/sqlQueries");
 
 const cryptojs = require("crypto-js");
-var AES = require("crypto-js/aes");
-var SHA256 = require("crypto-js/sha256");
+const AES = require("crypto-js/aes");
+const SHA256 = require("crypto-js/sha256");
 const atob = require("atob");
 const btoa = require("btoa");
 
@@ -56,7 +56,7 @@ const getPatientResult = async function (req, res) {
   // id.decrypted = atob(asd)
   id.decrypted = cryptojs.AES.decrypt(
     atob(id.encrypted),
-    encryptionKey
+    encryptionKey,
   ).toString(cryptojs.enc.Utf8);
 
   content.id = id;
@@ -75,19 +75,19 @@ const getPatientResult = async function (req, res) {
 
   if (req.query.preview) {
     previewData = JSON.parse(atob(preview[req.query.key]));
-    console.log({
-      message: "Removed preview data",
-      key: req.query.key,
-      data: preview[req.query.key],
-    });
+    // console.log({
+    //   message: "Removed preview data",
+    //   key: req.query.key,
+    //   data: preview[req.query.key],
+    // });
     delete preview[req.query.key];
-    console.log({ preview });
+    // console.log({ preview });
     previewData.result = unescape(previewData.result);
     content.patient.previewData = previewData;
   }
   const qrCode = await helpers.qrCode(
     req.params.resultId,
-    `https://uermhospital.com.ph/validate-result?tp=fg8rTvG2&i=`
+    `https://uermhospital.com.ph/validate-result?tp=fg8rTvG2&i=`,
   );
 
   if (previewData && previewData.type == "RIS") {

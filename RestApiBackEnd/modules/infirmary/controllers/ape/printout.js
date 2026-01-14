@@ -237,6 +237,11 @@ const _createExamTable = (examName, fields, fieldValues) => {
   ];
 
   for (const field of fields) {
+    // IGNORE CHART FIELD TYPE TEMPORARILY
+    if (field.fieldType === "EXAMDENTALCHART") {
+      continue;
+    }
+
     tableBody.push([
       { text: field.name, color: "#71797E" },
       { text: fieldValues[field.code] },
@@ -312,6 +317,7 @@ const _createContentBody = (examsMap, examParamsMap, details) => {
   const tableRows = [
     ["MED_HIST", "PE", "LAB_URI"],
     ["RAD_XR_CHST", "LAB_CBC", "LAB_FCL"],
+    ["DENTAL"],
   ];
 
   for (const examCodes of tableRows) {
@@ -382,7 +388,7 @@ const _getDocumentDefinition = (
     //   bold: false,
     //   italics: false,
     // },
-    pageSize: "LETTER",
+    pageSize: "LEGAL",
     // [left, top, right, bottom] or [horizontal, vertical] or just a number for equal margins
     pageMargins: [25, 165, 25, 90], // Body margins. Change top or bottom to resize the header or footer respectively.
     header: [

@@ -1,7 +1,7 @@
 const db = require("../../../helpers/sql.js");
 const tableName = "EasyClaimsOffline..cf4Claim"; // should be camel-cased
 
-const insert = async (patientId, consultationId, eClaimId, txn) => {
+const upsert = async (patientId, consultationId, eClaimId, txn) => {
   if (!patientId) throw "`patientId` is required.";
   if (!consultationId) throw "`consultationId` is required.";
   if (!eClaimId) throw "`eClaimId` is required.";
@@ -11,7 +11,7 @@ const insert = async (patientId, consultationId, eClaimId, txn) => {
     "*",
     tableName,
     { patientId, consultationId, eClaimId },
-    txn
+    txn,
   );
 
   if (existingRow) return existingRow;
@@ -25,7 +25,7 @@ const insert = async (patientId, consultationId, eClaimId, txn) => {
           eClaimId
         ) OUTPUT INSERTED.* VALUES (?, ?, ?);`,
         [patientId, consultationId, eClaimId],
-        txn
+        txn,
       )
     )[0] ?? null
   );
@@ -33,5 +33,5 @@ const insert = async (patientId, consultationId, eClaimId, txn) => {
 
 module.exports = {
   table: tableName,
-  insert,
+  upsert,
 };

@@ -23,6 +23,7 @@ const getExams = async (req, res) => {
       await db.query(
         `
           SELECT
+            id,
             code,
             [name],
             sequenceNumber,
@@ -97,8 +98,9 @@ const timeInOut = async (req, res) => {
             p.middleName,
             p.lastName,
             p.extName,
+            p.campusCode,
             p.affiliationCode,
-            p.campusCode
+            p.deptCode
           FROM
             AnnualPhysicalExam..Patients p
             LEFT JOIN AnnualPhysicalExam..Departments d ON d.Code = p.DeptCode
@@ -131,7 +133,10 @@ const timeInOut = async (req, res) => {
       txn,
     );
 
-    return { employee, attendance };
+    return {
+      status: 200,
+      body: { employee, attendance },
+    };
   });
 
   if (r?.error) {
@@ -139,7 +144,7 @@ const timeInOut = async (req, res) => {
     return;
   }
 
-  res.json(r);
+  res.status(r.status).json(r.body);
 };
 
 const attendance = async (req, res) => {

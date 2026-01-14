@@ -3,7 +3,7 @@ const { jsDateToISOString } = require("../../../helpers/util.js");
 // const { trim } = require("../../../helpers/util.js");
 const tableName = "EasyClaimsOffline..patient"; // should be camel-cased
 
-const insert = async (userCode, pmccNo, patient, _case, txn) => {
+const upsert = async (userCode, pmccNo, patient, _case, txn) => {
   if (!userCode) throw "`userCode` is required.";
   if (!pmccNo) throw "`pmccNo` is required.";
   if (!_case) throw "`_case` is required.";
@@ -129,5 +129,5 @@ const insert = async (userCode, pmccNo, patient, _case, txn) => {
 
 module.exports = {
   table: tableName,
-  insert,
+  upsert,
 };

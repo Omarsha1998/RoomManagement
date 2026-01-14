@@ -49,6 +49,7 @@ const getPatientCases = async function (req, res) {
 const getPatientCharges = async function (req, res) {
   if (util.empty(req.query))
     return res.status(400).json({ error: "Invalid parameter." });
+
   const returnValue = await sqlHelper.transact(async (txn) => {
     try {
       let conditions = ``;

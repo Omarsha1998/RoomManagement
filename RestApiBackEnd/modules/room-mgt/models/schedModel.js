@@ -289,7 +289,7 @@ const bookedRoomsByEmployeeCode = async (employeeCode) => {
     LEFT JOIN 
         [UE database]..[Subject Masterfile] sm ON rs.SubjectCode = sm.SubjectCode
     WHERE 
-        rs.CreatedBy = ? and rs.Active = 1
+        rs.CreatedBy = ? 
     ORDER 
         BY rs.DateTimeUpdated DESC
     `,
