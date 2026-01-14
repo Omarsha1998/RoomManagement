@@ -1,7 +1,9 @@
 importScripts("https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js");
+// importScripts("/excel.js");
 
 self.onmessage = async (event) => {
   const { type, data } = event.data;
+
   try {
     const result = await generateExcel(type, data);
     self.postMessage({ success: true, result });
@@ -100,6 +102,79 @@ const mergeTimeIntervals = (intervals) => {
   }
 
   return merged;
+};
+
+const calculateWeekdayAverageUtilization = (
+  workSheet,
+  mergedCells,
+  roomId,
+  allSchedule
+) => {
+  // Group columns by weekday
+  const weekdayColumns = {
+    Monday: [],
+    Tuesday: [],
+    Wednesday: [],
+    Thursday: [],
+    Friday: [],
+    Saturday: [],
+    Sunday: [],
+  };
+
+  // Collect all columns grouped by weekday
+  workSheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 2) {
+      // Header row
+      row.eachCell((cell, colNumber) => {
+        if (colNumber > 1 && cell.value) {
+          // Skip time column
+          const dateStr = cell.value.toString();
+
+          // Extract weekday from format: "Month-DD-YYYY (Weekday)"
+          const weekdayMatch = dateStr.match(/\(([^)]+)\)/);
+
+          if (weekdayMatch) {
+            const weekday = weekdayMatch[1].trim();
+
+            if (weekdayColumns[weekday]) {
+              weekdayColumns[weekday].push(colNumber);
+            }
+          }
+        }
+      });
+    }
+  });
+
+  // Calculate average utilization for each weekday
+  const weekdayAverages = {};
+
+  for (const [weekday, columns] of Object.entries(weekdayColumns)) {
+    if (columns.length === 0) continue;
+
+    let totalUtilization = 0;
+    let validDays = 0;
+
+    // Calculate utilization for each day
+    for (const colIndex of columns) {
+      const utilization = calculateColumnUtilizationByTime(
+        mergedCells,
+        roomId,
+        colIndex,
+        "Daily",
+        { fromDate: null, toDate: null },
+        allSchedule
+      );
+
+      totalUtilization += utilization;
+      validDays++;
+    }
+
+    // Calculate average
+    weekdayAverages[weekday] =
+      validDays > 0 ? Math.round(totalUtilization / validDays) : 0;
+  }
+
+  return weekdayAverages;
 };
 
 // Enhanced utilization calculation for a single column (daily)
@@ -441,6 +516,7 @@ const generateExcel = async (type, data) => {
       Days,
       intervals,
       section,
+      deptLabel,
       departmentCode,
       buildingDescription,
       paramFromDate,
@@ -560,6 +636,187 @@ const generateExcel = async (type, data) => {
 };
 
 // Updated addUtilizationRow function with the fixed calculation
+// const addUtilizationRow = async (
+//   workSheet,
+//   mergedCells,
+//   roomId,
+//   type,
+//   allSchedule
+// ) => {
+//   // Find the last row with time data
+//   let lastTimeRow = 0;
+//   const times = getTimeDaily();
+
+//   workSheet.eachRow((row, rowNumber) => {
+//     const firstCell = row.getCell(1).value;
+//     if (firstCell && times.includes(firstCell.toString())) {
+//       lastTimeRow = Math.max(lastTimeRow, rowNumber);
+//     }
+//   });
+
+//   // Add UTILIZATION row after the last time row
+//   const utilizationRow = lastTimeRow + 1;
+//   const utilizationCell = workSheet.getCell(utilizationRow, 1);
+//   utilizationCell.value = "UTILIZATION";
+//   utilizationCell.font = { name: "Arial", size: 11, bold: true };
+//   utilizationCell.fill = {
+//     type: "pattern",
+//     pattern: "solid",
+//     fgColor: { argb: "FFE0E0E0" },
+//   };
+
+//   // Define border style for weekly separators
+//   const weeklyBorderStyle = {
+//     top: { style: "thick", color: { argb: "FF000000" } },
+//     left: { style: "thick", color: { argb: "FF000000" } },
+//     bottom: { style: "thick", color: { argb: "FF000000" } },
+//     right: { style: "thick", color: { argb: "FF000000" } },
+//   };
+
+//   if (type === "Daily") {
+//     // Calculate for each column individually
+//     workSheet.eachRow((row, rowNumber) => {
+//       if (rowNumber === 2) {
+//         // Header row
+//         row.eachCell((cell, colNumber) => {
+//           if (colNumber > 1 && cell.value) {
+//             // Skip time column
+//             const utilization = calculateColumnUtilizationByTime(
+//               mergedCells,
+//               roomId,
+//               colNumber,
+//               type,
+//               { fromDate: null, toDate: null },
+//               allSchedule
+//             );
+
+//             const utilizationValueCell = workSheet.getCell(
+//               utilizationRow,
+//               colNumber
+//             );
+//             utilizationValueCell.value = `${utilization}%`;
+//             utilizationValueCell.font = { name: "Arial", size: 10, bold: true };
+//             utilizationValueCell.alignment = {
+//               horizontal: "center",
+//               vertical: "center",
+//             };
+//             utilizationValueCell.fill = {
+//               type: "pattern",
+//               pattern: "solid",
+//               fgColor: {
+//                 argb:
+//                   utilization >= 80
+//                     ? "FF90EE90" // Light green for high utilization
+//                     : utilization >= 50
+//                     ? "FFFFFF00" // Yellow for medium utilization
+//                     : "FFFFA500", // Orange for low utilization
+//               },
+//             };
+//           }
+//         });
+//       }
+//     });
+//   } else if (type === "Weekly") {
+//     // Group by weeks and calculate utilization
+//     const weekGroups = getWeekGroups(workSheet, type);
+
+//     for (const week of weekGroups) {
+//       const utilization = calculateColumnUtilizationByTimeEnhanced(
+//         mergedCells,
+//         roomId,
+//         week.columns,
+//         type,
+//         workSheet
+//       );
+
+//       // Merge utilization cells for the week
+//       if (week.startCol && week.endCol && week.startCol <= week.endCol) {
+//         workSheet.mergeCells(
+//           utilizationRow,
+//           week.startCol,
+//           utilizationRow,
+//           week.endCol
+//         );
+
+//         const utilizationValueCell = workSheet.getCell(
+//           utilizationRow,
+//           week.startCol
+//         );
+//         utilizationValueCell.value = `${utilization}%`;
+//         utilizationValueCell.font = { name: "Arial", size: 10, bold: true };
+//         utilizationValueCell.alignment = {
+//           horizontal: "center",
+//           vertical: "center",
+//         };
+//         utilizationValueCell.fill = {
+//           type: "pattern",
+//           pattern: "solid",
+//           fgColor: {
+//             argb:
+//               utilization >= 80
+//                 ? "FF90EE90"
+//                 : utilization >= 50
+//                 ? "FFFFFF00"
+//                 : "FFFFA500",
+//           },
+//         };
+
+//         // Apply thick black borders to weekly utilization cells as separators
+//         for (let col = week.startCol; col <= week.endCol; col++) {
+//           const borderCell = workSheet.getCell(utilizationRow, col);
+//           borderCell.border = weeklyBorderStyle;
+//         }
+//       }
+//     }
+//   } else if (type === "Monthly") {
+//     // Group by months and calculate utilization
+//     const monthGroups = getMonthGroups(workSheet);
+
+//     for (const month of monthGroups) {
+//       const utilization = calculateColumnUtilizationByTimeEnhanced(
+//         mergedCells,
+//         roomId,
+//         month.columns,
+//         type,
+//         workSheet
+//       );
+
+//       // Merge utilization cells for the month
+//       if (month.startCol && month.endCol && month.startCol <= month.endCol) {
+//         workSheet.mergeCells(
+//           utilizationRow,
+//           month.startCol,
+//           utilizationRow,
+//           month.endCol
+//         );
+
+//         const utilizationValueCell = workSheet.getCell(
+//           utilizationRow,
+//           month.startCol
+//         );
+//         utilizationValueCell.value = `${utilization}%`;
+//         utilizationValueCell.font = { name: "Arial", size: 10, bold: true };
+//         utilizationValueCell.alignment = {
+//           horizontal: "center",
+//           vertical: "center",
+//         };
+//         utilizationValueCell.fill = {
+//           type: "pattern",
+//           pattern: "solid",
+//           fgColor: {
+//             argb:
+//               utilization >= 80
+//                 ? "FF90EE90"
+//                 : utilization >= 50
+//                 ? "FFFFFF00"
+//                 : "FFFFA500",
+//           },
+//         };
+//       }
+//     }
+//   }
+// };
+
 const addUtilizationRow = async (
   workSheet,
   mergedCells,
@@ -581,7 +838,7 @@ const addUtilizationRow = async (
   // Add UTILIZATION row after the last time row
   const utilizationRow = lastTimeRow + 1;
   const utilizationCell = workSheet.getCell(utilizationRow, 1);
-  utilizationCell.value = "UTILIZATION";
+  utilizationCell.value = "UTILIZATION PER DAY";
   utilizationCell.font = { name: "Arial", size: 11, bold: true };
   utilizationCell.fill = {
     type: "pattern",
@@ -598,7 +855,7 @@ const addUtilizationRow = async (
   };
 
   if (type === "Daily") {
-    // Calculate for each column individually
+    // Calculate individual daily utilization
     workSheet.eachRow((row, rowNumber) => {
       if (rowNumber === 2) {
         // Header row
@@ -636,6 +893,75 @@ const addUtilizationRow = async (
                     : "FFFFA500", // Orange for low utilization
               },
             };
+          }
+        });
+      }
+    });
+
+    // ✅ NEW: Add AVERAGE UTILIZATION row for Daily type
+    const avgUtilizationRow = utilizationRow + 1;
+    const avgUtilizationCell = workSheet.getCell(avgUtilizationRow, 1);
+    avgUtilizationCell.value =
+      "AVERAGE UTILIZATION (Semester / Date Range Provided)";
+    avgUtilizationCell.font = { name: "Arial", size: 11, bold: true };
+    avgUtilizationCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFD3D3D3" }, // Light gray
+    };
+
+    // Calculate weekday averages
+    const weekdayAverages = calculateWeekdayAverageUtilization(
+      workSheet,
+      mergedCells,
+      roomId,
+      allSchedule
+    );
+
+    // Apply average utilization to each column based on its weekday
+    workSheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 2) {
+        // Header row
+        row.eachCell((cell, colNumber) => {
+          if (colNumber > 1 && cell.value) {
+            // Skip time column
+            const dateStr = cell.value.toString();
+
+            // Extract weekday from format: "Month-DD-YYYY (Weekday)"
+            const weekdayMatch = dateStr.match(/\(([^)]+)\)/);
+
+            if (weekdayMatch) {
+              const weekday = weekdayMatch[1].trim();
+              const avgUtilization = weekdayAverages[weekday] || 0;
+
+              const avgUtilizationValueCell = workSheet.getCell(
+                avgUtilizationRow,
+                colNumber
+              );
+              avgUtilizationValueCell.value = `${avgUtilization}%`;
+              avgUtilizationValueCell.font = {
+                name: "Arial",
+                size: 10,
+                bold: true,
+                italic: true,
+              };
+              avgUtilizationValueCell.alignment = {
+                horizontal: "center",
+                vertical: "center",
+              };
+              avgUtilizationValueCell.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: {
+                  argb:
+                    avgUtilization >= 80
+                      ? "FF90EE90" // Light green
+                      : avgUtilization >= 50
+                      ? "FFFFFF00" // Yellow
+                      : "FFFFA500", // Orange
+                },
+              };
+            }
           }
         });
       }
@@ -809,6 +1135,68 @@ const createSheetMonthly = async (
   return { workSheet, headerRow: null };
 };
 
+const validateAndClampTime = (startTime, endTime, minTime, maxTime) => {
+  const timeToMinutes = (time) => {
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const minutesToTime = (mins) => {
+    const hours = Math.floor(mins / 60);
+    const minutes = mins % 60;
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  const startMins = timeToMinutes(startTime);
+  const endMins = timeToMinutes(endTime);
+  const minMins = timeToMinutes(minTime);
+  const maxMins = timeToMinutes(maxTime);
+
+  // Check if schedule crosses midnight (end time is earlier than start time)
+  const crossesMidnight = endMins < startMins;
+
+  if (crossesMidnight) {
+    // Handle overnight schedules
+    // Only keep the portion that falls within our time range
+
+    // If start time is after max time, this schedule doesn't apply to our range
+    if (startMins > maxMins) {
+      return { isValid: false };
+    }
+
+    // If end time is before min time (early morning), clamp to max time
+    if (endMins < minMins) {
+      return {
+        validStartTime: startTime,
+        validEndTime: maxTime,
+        isValid: true,
+      };
+    }
+  }
+
+  // Check if completely outside our range
+  if (endMins < minMins || startMins > maxMins) {
+    return { isValid: false };
+  }
+
+  // Clamp to boundaries
+  const clampedStartMins = Math.max(startMins, minMins);
+  const clampedEndMins = Math.min(endMins, maxMins);
+
+  // Make sure end is after start
+  if (clampedEndMins <= clampedStartMins) {
+    return { isValid: false };
+  }
+
+  return {
+    validStartTime: minutesToTime(clampedStartMins),
+    validEndTime: minutesToTime(clampedEndMins),
+    isValid: true,
+  };
+};
+
 const applySchedule = async (
   workSheet,
   times,
@@ -827,6 +1215,10 @@ const applySchedule = async (
   allSchedule
 ) => {
   const timesMap = new Map(times.map((time, index) => [time, index + 3]));
+
+  // Define time boundaries
+  const MIN_TIME = "07:00";
+  const MAX_TIME = "20:00";
 
   const fromDate = new Date(FromDate);
   const toDate = new Date(ToDate);
@@ -854,11 +1246,25 @@ const applySchedule = async (
           const [startTime, endTime] = timeRange
             .split("-")
             .map((time) => time.trim());
-          const startRow = timesMap.get(startTime);
-          const endRow = timesMap.get(endTime);
+
+          // Validate and clamp times to boundaries
+          const { validStartTime, validEndTime, isValid } =
+            validateAndClampTime(startTime, endTime, MIN_TIME, MAX_TIME);
+
+          if (!isValid) {
+            console.warn(
+              `Skipping invalid/out-of-range time: ${timeRange} for ${scheduleDay}`
+            );
+            continue;
+          }
+
+          const startRow = timesMap.get(validStartTime);
+          const endRow = timesMap.get(validEndTime);
 
           if (startRow === undefined || endRow === undefined) {
-            console.error(`Invalid time range: ${timeRange}`);
+            console.warn(
+              `Time not in map after validation: ${validStartTime}-${validEndTime}`
+            );
             continue;
           }
 
@@ -878,7 +1284,7 @@ const applySchedule = async (
             deptLabel,
             subjectCode,
             sections,
-            timeRange
+            `${validStartTime}-${validEndTime}` // Use clamped time
           );
 
           if (timeRowIndexStart >= 1) {
@@ -886,8 +1292,8 @@ const applySchedule = async (
               `${roomId}-${result.minStartRow}-${result.maxEndRow}-${result.newColIndex}`,
               {
                 details: result.detailString,
-                college: deptLabel, // Keep for backward compatibility
-                colleges: result.colleges, // New field for multiple colleges
+                college: deptLabel,
+                colleges: result.colleges,
               }
             );
           }
@@ -896,6 +1302,94 @@ const applySchedule = async (
     }
   }
 };
+
+// const applySchedule = async (
+//   workSheet,
+//   times,
+//   parsedSchedule,
+//   subjectCode,
+//   roomId,
+//   mergedCells,
+//   subjectDescription,
+//   headerRow,
+//   deptLabel,
+//   type,
+//   FromDate,
+//   ToDate,
+//   paramFromDate,
+//   paramToDate,
+//   allSchedule
+// ) => {
+//   const timesMap = new Map(times.map((time, index) => [time, index + 3]));
+
+//   const fromDate = new Date(FromDate);
+//   const toDate = new Date(ToDate);
+//   const monthlyDays = getDailyMonths(fromDate, toDate);
+//   const monthSequence = getSequenceMonth(paramFromDate, paramToDate);
+
+//   let baseIndex = 1;
+
+//   for (const days of monthlyDays) {
+//     let indexNum = 1 + times.length;
+
+//     for (const parsed of parsedSchedule) {
+//       const { day: scheduleDay, timeRange, sections } = parsed;
+//       for (const [colIndex, day] of days.entries()) {
+//         const monthYear = `${day.date.getFullYear()}-${
+//           day.date.getMonth() + 1
+//         }`;
+//         const position = getMonthPosition(monthYear, monthSequence);
+
+//         let rowIndex = (baseIndex + indexNum) * position;
+
+//         const dateInRange = dateRangeIn(day.date, fromDate, toDate);
+
+//         if (day.weekday === scheduleDay && dateInRange) {
+//           const [startTime, endTime] = timeRange
+//             .split("-")
+//             .map((time) => time.trim());
+//           const startRow = timesMap.get(startTime);
+//           const endRow = timesMap.get(endTime);
+
+//           if (startRow === undefined || endRow === undefined) {
+//             console.error(`Invalid time range: ${timeRange}`);
+//             continue;
+//           }
+
+//           const newColIndex = colIndex + 2;
+//           const timeRowIndexStart = rowIndex - 29 + startRow;
+//           const timeRowIndexEnd = rowIndex - 29 + endRow;
+
+//           let minStartRow = timeRowIndexStart;
+//           let maxEndRow = timeRowIndexEnd;
+
+//           const result = await processMergedCells(
+//             roomId,
+//             minStartRow,
+//             maxEndRow,
+//             newColIndex,
+//             mergedCells,
+//             deptLabel,
+//             subjectCode,
+//             sections,
+//             timeRange
+//           );
+
+//           if (timeRowIndexStart >= 1) {
+//             mergedCells.set(
+//               `${roomId}-${result.minStartRow}-${result.maxEndRow}-${result.newColIndex}`,
+//               {
+//                 details: result.detailString,
+//                 college: deptLabel, // Keep for backward compatibility
+//                 colleges: result.colleges, // New field for multiple colleges
+//               }
+//             );
+//           }
+//         }
+//       }
+//     }
+//   }
+// };
 const dateRangeIn = (loopDate, fromDate, toDate) => {
   return loopDate >= fromDate && loopDate <= toDate;
 };
@@ -1091,20 +1585,21 @@ const getColorCollege = (college) => {
   if (!college) return "FFFFFF";
 
   let color;
+
   switch (college.toUpperCase().trim()) {
-    case "COLLEGE OF ALLIED REHABILITATION SCIENCES":
+    case "4000":
       color = "F44336"; // Red
       break;
-    case "COLLEGE OF MEDICINE":
+    case "2000":
       color = "2196F3"; // Blue
       break;
-    case "COLLEGE OF ALLIED HEALTH PROFESSIONS":
+    case "10100":
       color = "FFFF00"; // Yellow
       break;
-    case "COLLEGE OF NURSING":
+    case "3000":
       color = "21BA45"; // Green
       break;
-    case "GRADUATE SCHOOL":
+    case "8000":
       color = "551A8B"; // Purple
       break;
     case "MIXUSED":
@@ -1114,6 +1609,29 @@ const getColorCollege = (college) => {
       color = "FFFFFF"; // White
       break;
   }
+  // switch (college.toUpperCase().trim()) {
+  //   case "COLLEGE OF ALLIED REHABILITATION SCIENCES":
+  //     color = "F44336"; // Red
+  //     break;
+  //   case "COLLEGE OF MEDICINE":
+  //     color = "2196F3"; // Blue
+  //     break;
+  //   case "COLLEGE OF ALLIED HEALTH PROFESSIONS":
+  //     color = "FFFF00"; // Yellow
+  //     break;
+  //   case "COLLEGE OF NURSING":
+  //     color = "21BA45"; // Green
+  //     break;
+  //   case "GRADUATE SCHOOL":
+  //     color = "551A8B"; // Purple
+  //     break;
+  //   case "MIXUSED":
+  //     color = "FF9800"; // Orange
+  //     break;
+  //   default:
+  //     color = "FFFFFF"; // White
+  //     break;
+  // }
 
   return color;
 };

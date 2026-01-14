@@ -265,7 +265,6 @@
                     v-model="searchTextEmployee"
                     placeholder="Search"
                     outlined
-                    standout="bg-amber-8 text-white"
                     clearable
                     :class="[$q.screen.name + '-text2']"
                     @clear="clearSearchText"
@@ -439,79 +438,50 @@ export default {
     // },
 
     filterAndSortBookedRooms(bookedScheduleArray, queryText, selectedStatus) {
-      if (Array.isArray(bookedScheduleArray)) {
-        const query = queryText.toLowerCase();
-        const status =
-          selectedStatus?.label?.toLowerCase() ?? selectedStatus?.toLowerCase();
+      if (!Array.isArray(bookedScheduleArray)) return [];
 
-        const filteredRooms = bookedScheduleArray.filter((row) => {
-          return (
-            status === "all status" ||
-            row.booked.some((bookedEntry) =>
-              status === "active" ? bookedEntry.active : !bookedEntry.active
-            )
-          );
+      const query = queryText?.toLowerCase() || "";
+      const status =
+        selectedStatus?.label?.toLowerCase() ?? selectedStatus?.toLowerCase();
+
+      const result = bookedScheduleArray
+        .map((room) => {
+          const matchedBooked =
+            room.booked?.filter((booking) => {
+              const statusMatch =
+                status === "all status" ||
+                (status === "active" ? booking.active : !booking.active);
+              const searchMatch =
+                booking.subjectCode?.toLowerCase().includes(query) ||
+                booking.subjectDescription?.toLowerCase().includes(query) ||
+                booking.section?.toLowerCase().includes(query) ||
+                booking.professor?.toLowerCase().includes(query) ||
+                booking.remarks?.toLowerCase().includes(query) ||
+                booking.formatFrom?.toLowerCase().includes(query) ||
+                booking.formatTo?.toLowerCase().includes(query);
+
+              return statusMatch && searchMatch;
+            }) || [];
+
+          return {
+            ...room,
+            booked: matchedBooked,
+          };
+        })
+        .filter((room) => room.booked.length > 0)
+        .sort((a, b) => {
+          const nameA = a.roomName || "";
+          const nameB = b.roomName || "";
+          const dateA = new Date(a.dateTimeCreated);
+          const dateB = new Date(b.dateTimeCreated);
+
+          if (nameA[0] < nameB[0]) return -1;
+          if (nameA[0] > nameB[0]) return 1;
+
+          return dateA - dateB;
         });
 
-        return filteredRooms
-          .filter((row) => {
-            const roomNameMatches =
-              row.roomName &&
-              row.roomName.toString().toLowerCase().includes(query);
-
-            const roomTypeMatches =
-              row.roomDescription &&
-              row.roomDescription.toString().toLowerCase().includes(query);
-
-            const bookedMatches = row.booked.some(
-              (booking) =>
-                (booking.subjectCode &&
-                  booking.subjectCode
-                    .toString()
-                    .toLowerCase()
-                    .includes(query)) ||
-                (booking.subjectDescription &&
-                  booking.subjectDescription
-                    .toString()
-                    .toLowerCase()
-                    .includes(query))
-            );
-
-            const fromDateMatches =
-              row.fromDate &&
-              new Date(row.fromDate).toISOString().slice(0, 10).includes(query);
-
-            const toDateMatches =
-              row.toDate &&
-              new Date(row.toDate).toISOString().slice(0, 10).includes(query);
-
-            return (
-              roomNameMatches ||
-              roomTypeMatches ||
-              bookedMatches ||
-              fromDateMatches ||
-              toDateMatches
-            );
-          })
-          .sort((a, b) => {
-            const nameA = a.roomName || "";
-            const nameB = b.roomName || "";
-            const dateA = new Date(a.dateTimeCreated);
-            const dateB = new Date(b.dateTimeCreated);
-
-            const firstLetterA = nameA.charAt(0).toUpperCase();
-            const firstLetterB = nameB.charAt(0).toUpperCase();
-
-            if (firstLetterA < firstLetterB) return -1;
-            if (firstLetterA > firstLetterB) return 1;
-
-            if (dateA < dateB) return -1;
-            if (dateA > dateB) return 1;
-
-            return 0;
-          });
-      }
-      return [];
+      return result;
     },
 
     // filterAndSortBookedRooms(bookedScheduleArray, queryText, selectedStatus) {

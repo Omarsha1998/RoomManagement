@@ -578,7 +578,7 @@ export default {
       this.$q
         .dialog({
           title: "Warning",
-          message: "Are you sure you want schedule a room?",
+          message: "Are you sure you want to schedule a room?",
           persistent: true,
           ok: {
             push: true,
@@ -609,142 +609,114 @@ export default {
             minute: "2-digit",
           });
 
-          if (timeFrom24 === "00:00") {
-            timeFrom24 = "24:00";
-          }
-
-          if (timeTo24 === "00:00") {
-            timeTo24 = "24:00";
-          }
+          if (timeFrom24 === "00:00") timeFrom24 = "24:00";
+          if (timeTo24 === "00:00") timeTo24 = "24:00";
 
           const interval = `${timeFrom24}-${timeTo24}`;
-
-          let data = null;
+          const allData = [];
 
           if (Array.isArray(this.selectedRoomSched.roomId)) {
             for (const roomId of this.selectedRoomSched.roomId) {
               let data = null;
+
               if (this.selectedDates.length > 0) {
                 data = this.sharedData(this.selectedDates, interval, roomId);
+              } else if (this.dateRange?.from || this.dateRange?.to) {
+                data = await this.dateRangeData(
+                  this.dateRange.from,
+                  this.dateRange.to,
+                  interval,
+                  roomId
+                );
               } else {
-                if (this.dateRange.from || this.dateRange.to) {
-                  data = await this.dateRangeData(
-                    this.dateRange.from,
-                    this.dateRange.to,
-                    interval,
-                    roomId
-                  );
-                } else {
-                  data = await this.dateRangeData(
-                    this.dateRange,
-                    this.dateRange,
-                    interval,
-                    roomId
-                  );
-                }
+                data = await this.dateRangeData(
+                  this.dateRange,
+                  this.dateRange,
+                  interval,
+                  roomId
+                );
               }
 
-              try {
-                this.$q.loading.show({
-                  spinner: QSpinnerIos,
-                  message: "Submitting Schedule",
-                  messageColor: "blue-10",
-                  backgroundColor: "grey-1",
-                  spinnerColor: "blue-10",
-                  customClass: "custom-loading-style",
-                  spinnerSize: "7em",
-                });
-                helperMethods.disablePointerEvents();
-
-                await this.$store.dispatch(
-                  "roomModule/createCustomScheduleBooking",
-                  data
-                );
-                this.$q.loading.hide();
-
-                this.$q.notify({
-                  color: "green-8",
-                  position: "center",
-                  message: `Successfully Scheduled Room(s): ${
-                    Array.isArray(this.selectedRoomSched)
-                      ? this.selectedRoomSched
-                          .map((room) => room.roomName)
-                          .join(", ")
-                      : this.selectedRoomSched.roomName
-                  }`,
-                  icon: "check",
-                  iconColor: "white",
-                  timeout: 1000,
-                  progress: true,
-                });
-
-                helperMethods.enablePointerEvents();
-                this.loader = false;
-                this.dateFrom = null;
-                this.dateTo = null;
-                this.remarks = null;
-                this.dateRange = null;
-                this.selectedRoomSched = null;
-                this.timeFrom = null;
-                this.timeTo = null;
-                this.selectedDays = null;
-                this.prof = null;
-                this.selectedDepartment = null;
-                this.selectedSemester = null;
-                this.selectedSection = null;
-                this.selectedSubject = null;
-                this.capacity = null;
-                this.searchText = "";
-                this.step = 1;
-              } catch (error) {
-                this.$q.loading.hide();
-                this.loader = false;
-                helperMethods.enablePointerEvents();
-                this.$q.loading.hide();
-                if (error.response?.status === 400) {
-                  this.$q.notify({
-                    color: "negative",
-                    position: "center",
-                    message: error.response.data.body,
-                    icon: "report_problem",
-                    iconColor: "white",
-                    timeout: 1000,
-                    progress: true,
-                  });
-                } else {
-                  this.$q.notify({
-                    color: "negative",
-                    position: "center",
-                    message: `Error Scheduling Room ID: ${roomId}`,
-                    icon: "report_problem",
-                    iconColor: "white",
-                    timeout: 1000,
-                    progress: true,
-                  });
-                }
+              if (Array.isArray(data)) {
+                allData.push(...data);
+              } else {
+                allData.push(data);
               }
             }
           }
-          helperMethods.enablePointerEvents();
-          // this.loader = false;
-          // this.dateFrom = null;
-          // this.dateTo = null;
-          // this.remarks = null;
-          // this.dateRange = null;
-          // this.selectedRoomSched = null;
-          // this.timeFrom = null;
-          // this.timeTo = null;
-          // this.selectedDays = null;
-          // this.prof = null;
-          // this.selectedDepartment = null;
-          // this.selectedSemester = null;
-          // this.selectedSection = null;
-          // this.selectedSubject = null;
-          // this.capacity = null;
-          // this.searchText = "";
-          // this.step = 1;
-        })
-        .onDismiss(() => {});
+
+          try {
+            this.$q.loading.show({
+              spinner: QSpinnerIos,
+              message: "Submitting Schedule",
+              messageColor: "blue-10",
+              backgroundColor: "grey-1",
+              spinnerColor: "blue-10",
+              customClass: "custom-loading-style",
+              spinnerSize: "7em",
+            });
+            helperMethods.disablePointerEvents();
+
+            await this.$store.dispatch(
+              "roomModule/createCustomScheduleBooking",
+              allData
+            );
+
+            this.$q.loading.hide();
+
+            this.$q.notify({
+              color: "green-8",
+              position: "center",
+              message: `Successfully Scheduled Room(s): ${
+                Array.isArray(this.selectedRoomSched)
+                  ? this.selectedRoomSched
+                      .map((room) => room.roomName)
+                      .join(", ")
+                  : this.selectedRoomSched.roomName
+              }`,
+              icon: "check",
+              iconColor: "white",
+              timeout: 1000,
+              progress: true,
+            });
+
+            helperMethods.enablePointerEvents();
+            this.loader = false;
+            this.dateFrom = null;
+            this.dateTo = null;
+            this.remarks = null;
+            this.dateRange = null;
+            this.selectedRoomSched = null;
+            this.timeFrom = null;
+            this.timeTo = null;
+            this.selectedDays = null;
+            this.prof = null;
+            this.selectedDepartment = null;
+            this.selectedSemester = null;
+            this.selectedSection = null;
+            this.selectedSubject = null;
+            this.capacity = null;
+            this.searchText = "";
+            this.step = 1;
+          } catch (error) {
+            this.$q.loading.hide();
+            helperMethods.enablePointerEvents();
+
+            const errMsg =
+              error.response?.data?.body ||
+              "Error scheduling one or more rooms.";
+
+            this.$q.notify({
+              color: "negative",
+              position: "center",
+              message: errMsg,
+              icon: "report_problem",
+              iconColor: "white",
+              timeout: 2000,
+              progress: true,
+            });
+          }
+        });
     },
 
     async getDepartments() {

@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
   <q-layout view="hHh Lpr lff">
     <Loader :isLoading="loader" :logout="true" />
 
@@ -108,6 +108,184 @@
         </div>
       </div>
     </q-drawer>
+
+    <q-page-container>
+      <router-view />
+    </q-page-container>
+  </q-layout>
+</template> -->
+
+<template>
+  <q-layout view="lHh Lpr lff">
+    <q-drawer
+      v-model="drawer"
+      show-if-above
+      :width="290"
+      :breakpoint="0"
+      style="position: relative; background: transparent"
+    >
+      <q-btn
+        flat
+        round
+        dense
+        size="lg"
+        icon="close"
+        class="drawerBtn"
+        style="position: absolute; right: 10px; top: 10px; z-index: 1"
+        @click="toggleDrawer"
+      />
+
+      <div
+        class="q-pa-none text-center drawerStyle"
+        style="
+          position: absolute;
+          inset: 5px 10px 5px 10px;
+          border-radius: 10px;
+          display: flex;
+          flex-direction: column;
+          height: calc(100% - 10px);
+        "
+      >
+        <div class="q-pa-none" style="position: sticky; top: 0">
+          <div style="padding: 10px 0 0 0; text-align: center">
+            <img
+              src="../assets/images/uerm-hospital-logo.png"
+              alt="logo"
+              style="
+                width: 90%;
+                height: auto;
+                max-height: 120px;
+                object-fit: contain;
+              "
+            />
+          </div>
+          <div header class="text-center q-pb-md">
+            <div
+              class="text-caption text-grey-8 q-pa-none text-bold q-mt-xs"
+              style="
+                word-break: break-word;
+                white-space: normal;
+                line-height: 1.2;
+              "
+            >
+              University of East Ramon Magsaysay Memorial Medical Center Inc.
+            </div>
+          </div>
+        </div>
+
+        <!-- Scrollable Menu Items -->
+        <div
+          class="drawerScroll q-pa-none"
+          style="
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 80px;
+          "
+        >
+          <q-list>
+            <q-item class="flex column">
+              <EssentialLink
+                style="width: 100%"
+                v-for="link in essentialLinks"
+                :key="link.title"
+                v-bind="link"
+              />
+            </q-item>
+          </q-list>
+        </div>
+
+        <!-- Floating Logout Button -->
+        <div
+          style="
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            z-index: 100;
+          "
+        >
+          <q-btn
+            style="width: 100%"
+            unelevated
+            class="bg-negative text-white"
+            icon="logout"
+            name="logout"
+            label="logout"
+            @click="onLogout()"
+          />
+        </div>
+      </div>
+    </q-drawer>
+
+    <q-header
+      class="bg-primary"
+      :style="drawer ? 'border-bottom-left-radius: 10px' : ''"
+    >
+      <q-toolbar>
+        <q-btn
+          v-if="!drawer"
+          flat
+          dense
+          round
+          icon="menu"
+          aria-label="Menu"
+          @click="toggleDrawer"
+        />
+
+        <q-toolbar-title
+          @click="redirectToAnnouncements()"
+          style="cursor: pointer"
+        >
+          {{ app_name }}
+        </q-toolbar-title>
+        <q-space />
+
+        <q-btn flat round dense>
+          <q-avatar class="avatar-pop" size="40px">
+            <img :src="imageApi + employeeId" alt="avatar" />
+          </q-avatar>
+          <q-menu class="no-hover">
+            <q-card style="min-width: 250px">
+              <q-card-section class="text-center q-pb-sm">
+                <q-avatar size="80px" class="q-mb-sm">
+                  <img :src="imageApi + employeeId" alt="avatar" />
+                </q-avatar>
+                <div class="text-subtitle1 text-bold">
+                  {{ employeeFullName }}
+                </div>
+                <!-- <div class="text-caption text-grey-7">
+                  {{ employeePosition }}
+                </div> -->
+                <div class="text-caption text-grey-7">
+                  {{ employeeDeptDesc }}
+                </div>
+              </q-card-section>
+
+              <q-separator />
+
+              <q-card-section class="q-pa-xs">
+                <div
+                  class="avatarBtn q-pa-sm cursor-pointer"
+                  v-ripple
+                  v-close-popup
+                  @click="onLogout"
+                >
+                  <q-icon
+                    name="logout"
+                    size="sm"
+                    class="q-mr-lg q-ml-sm text-negative"
+                  />
+                  <span class="text-black">Logout</span>
+                </div>
+              </q-card-section>
+            </q-card>
+          </q-menu>
+        </q-btn>
+      </q-toolbar>
+    </q-header>
 
     <q-page-container>
       <router-view />

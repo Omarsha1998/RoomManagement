@@ -164,7 +164,7 @@ export default {
       } catch (error) {
         // this.$q.loading.hide();
         this.loader = false;
-        if (error.response.status == "402") {
+        if (error.response.status == "401") {
           this.$q.notify({
             color: "negative",
             position: "center",

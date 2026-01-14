@@ -70,7 +70,6 @@
 <script>
 import { mapGetters } from "vuex";
 import SkeletonLoader from "../components/loadingSkeleton.vue";
-import helperMethods from "src/helperMethods";
 import Loader from "../components/Loader.vue";
 import reportComponent from "../components/reportComponent.vue";
 

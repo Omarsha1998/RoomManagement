@@ -119,6 +119,16 @@ export default route(function (/* { store, ssrContext } */) {
             },
             component: () => import("src/pages/Reports.vue"),
           },
+
+          // {
+          //   path: "/flower",
+          //   name: "floewr",
+          //   meta: {
+          //     title: "Report",
+          //     requiresAuth: true,
+          //   },
+          //   component: () => import("src/pages/Flower.vue"),
+          // },
         ],
       },
       {

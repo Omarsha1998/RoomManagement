@@ -169,6 +169,12 @@
   border-radius: 10px;
 }
 
+.avatarBtn:hover {
+  background-color: $blue-2;
+  transition: background-color 2s ease;
+  border-radius: 5px;
+}
+
 .q-menu {
   height: auto !important;
   max-height: 300px !important;
@@ -232,12 +238,12 @@
 .buttonGroup:hover {
   background-color: $amber-8;
   transition: background-color 3s ease;
-  border-radius: 10px;
+  border-radius: 5px;
 }
 
 .q-btn:hover {
   transition: 500ms ease;
-  border-radius: 15px;
+  border-radius: 5px;
 }
 
 .custom-stepper-header {

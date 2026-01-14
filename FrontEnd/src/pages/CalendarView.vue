@@ -151,6 +151,7 @@ export default {
         for (const schedule of scheduleEntry.booked) {
           const {
             subjectCode,
+            subjectDescription,
             deptLabel,
             section,
             days,
@@ -206,6 +207,9 @@ export default {
             roomName,
             roomDescription,
             floor,
+            subjectCode,
+            subjectDescription,
+            section,
             department: deptLabel,
             intervals,
             title: formattedTitle,
@@ -221,7 +225,7 @@ export default {
 
           const eventExists = this.events.some(
             (existingEvent) =>
-              existingEvent.deptCode === event.deptCode &&
+              existingEvent.department === event.department &&
               existingEvent.intervals === event.intervals &&
               existingEvent.fromDate === event.fromDate &&
               existingEvent.toDate === event.toDate &&

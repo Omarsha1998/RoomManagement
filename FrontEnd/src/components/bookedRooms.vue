@@ -57,7 +57,7 @@
     </template>
   </q-virtual-scroll>
 
-  <q-dialog v-model="schedDialog">
+  <q-dialog v-model="schedDialog" full-width>
     <q-card
       :class="[
         $q.screen.name + '-text',
@@ -92,7 +92,63 @@
           :class="[$q.screen.name + '-text2']"
           @clear="clearSearchText"
         />
-        <q-virtual-scroll
+
+        <q-table
+          :rows="computedSelectedSchedule"
+          :columns="selectedCol"
+          row-key="doctorCode"
+          virtual-scroll
+          hide-pagination
+          :rows-per-page-options="[0]"
+          style="max-height: 700px"
+        >
+          <template v-slot:header>
+            <q-tr class="sticky-thead">
+              <q-th
+                v-for="col in selectedCol"
+                :key="col.name"
+                class="text-bold text-center"
+                :style="{ width: col.width || 'auto' }"
+              >
+                {{ col.label }}
+              </q-th>
+            </q-tr>
+          </template>
+
+          <template v-slot:body="props">
+            <q-tr
+              :props="props"
+              :key="props.row.subjectCode"
+              @click="employeeSched ? clickedRow(props.row) : null"
+              class="hover-row"
+            >
+              <q-td
+                v-for="col in selectedCol"
+                :key="col.name"
+                class="text-center"
+                :style="{
+                  width: col.width || 'auto',
+                  whiteSpace:
+                    col.name === 'subjectDescription' ||
+                    col.name === 'deptLabel' ||
+                    col.name === 'remarks'
+                      ? 'normal'
+                      : 'nowrap',
+                  wordWrap:
+                    col.name === 'subjectDescription' ||
+                    col.name === 'deptLabel' ||
+                    col.name === 'remarks'
+                      ? 'break-word'
+                      : 'normal',
+                }"
+              >
+                <renderCellDia :row="props.row" :col="col" />
+              </q-td>
+            </q-tr>
+          </template>
+        </q-table>
+
+        <!-- <q-virtual-scroll
           class="virtual-scroll"
           type="table"
           style="max-height: 700px"
@@ -142,18 +198,21 @@
               </q-td>
             </q-tr>
           </template>
-        </q-virtual-scroll>
+        </q-virtual-scroll> -->
       </q-card-section>
     </q-card>
   </q-dialog>
 
   <q-dialog v-model="selectedSchedDia" persistent>
-    <q-card :class="[$q.screen.name + '-text']">
+    <q-card
+      :class="[$q.screen.name + '-text']"
+      style="width: fit-content; min-width: 300px; max-width: 90vw"
+    >
       <q-card-section class="bg-blue-10 row items-center">
         <div class="text-white text-bold">Selected Schedule</div>
         <q-space></q-space>
         <q-btn
-          class="bg-white text-biue-10"
+          class="bg-white text-blue-10"
           icon="close"
           push
           round
@@ -163,23 +222,52 @@
           v-close-popup
         ></q-btn>
       </q-card-section>
+
       <q-card-section>
-        <p class="q-pa-sm">
-          {{ selectedRow.remarks }} {{ selectedRow.deptLabel }}:
-          <strong
-            >{{ selectedRow.subjectCode }} -
-            {{ selectedRow.subjectDescription }}</strong
+        <p class="q-pa-xs">
+          <span
+            v-if="selectedRow.subjectCode || selectedRow.subjectDescription"
           >
-          <br />
-          Section: {{ selectedRow.section }}.
-          <br />
-          Time:
-          {{ selectedRow.formattedIntervals }}
-          <br />
-          Every {{ formatDays(selectedRow.days) }} of date
-          {{ selectedRow.formatFrom }} to {{ selectedRow.formatTo }}
+            Subject Description (Code - Description):
+            <strong>
+              {{ selectedRow.subjectCode }} -
+              {{ selectedRow.subjectDescription }}
+            </strong>
+            <br />
+          </span>
+
+          <span v-if="selectedRow.section">
+            Section: {{ selectedRow.section }}<br />
+          </span>
+
+          <span v-if="selectedRow.formattedIntervals">
+            Time: {{ selectedRow.formattedIntervals }}<br />
+          </span>
+
+          <span
+            v-if="
+              selectedRow.days && selectedRow.formatFrom && selectedRow.formatTo
+            "
+          >
+            Day(s) / Date :
+            {{ selectedRow.formatFrom !== selectedRow.formatTo ? "Every" : "" }}
+            {{ formatDays(selectedRow.days) }}
+            {{ selectedRow.formatFrom !== selectedRow.formatTo ? "of" : "" }}
+            {{
+              selectedRow.formatFrom !== selectedRow.formatTo
+                ? selectedRow.formatFrom + "to" + selectedRow.formatTo
+                : selectedRow.formatFrom
+            }}
+
+            <br />
+          </span>
+
+          <span v-if="selectedRow.remarks && !isNA(selectedRow.remarks)">
+            Remarks: {{ selectedRow.remarks }}
+          </span>
         </p>
       </q-card-section>
+
       <q-card-section class="text-right">
         <q-btn
           class="bg-negative text-white"
@@ -324,30 +412,37 @@ export default {
       if (Array.isArray(this.selectedSchedule)) {
         const query = this.searchTextSched.toLowerCase();
 
-        return this.selectedSchedule.filter((row) => {
-          if (row.intervals) {
-            row.formattedIntervals = helperMethods.formatIntervals(
-              row.intervals
+        return this.selectedSchedule
+          .filter((row) => {
+            if (row.intervals) {
+              row.formattedIntervals = helperMethods.formatIntervals(
+                row.intervals
+              );
+            }
+
+            const subjectCode = row.subjectCode?.toString().toLowerCase() ?? "";
+            const subjectDescription =
+              row.subjectDescription?.toString().toLowerCase() ?? "";
+
+            return (
+              subjectCode.includes(query) ||
+              subjectDescription.includes(query) ||
+              row.formatFrom.includes(query) ||
+              row.formatTo.includes(query)
             );
-          }
-
-          const subjectCode = row.subjectCode?.toString().toLowerCase() ?? "";
-          const subjectDescription =
-            row.subjectDescription?.toString().toLowerCase() ?? "";
-
-          return (
-            subjectCode.includes(query) ||
-            subjectDescription.includes(query) ||
-            row.formatFrom.includes(query) ||
-            row.formatTo.includes(query)
-          );
-        });
+          })
+          .sort((a, b) => (a.intervals || "").localeCompare(b.intervals || ""));
       }
       return [];
     },
   },
 
   methods: {
+    isNA(value) {
+      if (!value) return true;
+      return ["n/a", "na"].includes(value.trim().toLowerCase());
+    },
+
     bookMethodDialog(sched) {
       this.schedDialog = true;
       this.selectedSchedule = sched;
