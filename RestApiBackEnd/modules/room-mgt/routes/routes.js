@@ -17,6 +17,8 @@ router.get("/getRoomTypes", validateAccessToken, appController.getRoomTypes);
 
 router.get("/getBuildings", validateAccessToken, appController.getBuildings);
 
+// appController.runTimeData();
+
 router.get(
   "/getDepartments",
   validateAccessToken,

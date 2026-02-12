@@ -156,6 +156,151 @@ const getDepartments = async (req, res) => {
   }
 };
 
+// const runTimeData = async () => {
+//   // Convert UTC to UTC+8 (for READING from DB)
+//   const toUTC8 = (date) => {
+//     if (!date) return null;
+//     const d = new Date(date);
+//     d.setHours(d.getHours() + 8);
+//     return d;
+//   };
+
+//   const parseDate = (str) => {
+//     if (!str) return null;
+//     const d = new Date(str.replace(" ", "T"));
+//     d.setHours(d.getHours() + 8);
+//     return d;
+//   };
+
+//   // Subtract 8 hours to convert to UTC
+//   const toUTC = (date) => {
+//     if (!date) return null;
+//     const d = new Date(date);
+//     d.setHours(d.getHours() - 8);
+//     return d;
+//   };
+
+//   // Get earliest non-null date
+//   const getEarliest = (...dates) => {
+//     const valid = dates.filter(Boolean);
+//     return valid.length ? new Date(Math.min(...valid)) : null;
+//   };
+
+//   // Get latest non-null date
+//   const getLatest = (...dates) => {
+//     const valid = dates.filter(Boolean);
+//     return valid.length ? new Date(Math.max(...valid)) : null;
+//   };
+
+//   const normalizeTime = (value) => {
+//     if (
+//       value === null ||
+//       value === undefined ||
+//       value === "null" ||
+//       value === "NULL" ||
+//       String(value).trim() === ""
+//     ) {
+//       return null;
+//     }
+//     return value;
+//   };
+
+//   const data = [];
+
+//   const result = [];
+
+//   for (const item of data) {
+//     try {
+//       await db.transact(async (txn) => {
+//         const periodKey = item.period.replaceAll("/", "");
+//         const periodDate = item.period.replaceAll("/", "-");
+
+//         const newTimeIn = normalizeTime(item.timeIn)
+//           ? parseDate(`${periodDate} ${normalizeTime(item.timeIn)}:00.000`)
+//           : null;
+
+//         const newTimeOut = normalizeTime(item.timeOut)
+//           ? parseDate(`${periodDate} ${normalizeTime(item.timeOut)}:00.000`)
+//           : null;
+
+//         const existing = await roomModel.checkTimeData(periodKey, item.code);
+
+//         let finalTimeIn, finalTimeOut;
+
+//         if (existing?.length) {
+//           const dbTimeIn = toUTC8(existing[0].timeIn);
+//           const dbTimeOut = toUTC8(existing[0].timeOut);
+
+//           const allTimes = [dbTimeIn, dbTimeOut, newTimeIn, newTimeOut];
+//           const earliest = getEarliest(...allTimes);
+//           const latest = getLatest(...allTimes);
+
+//           if (earliest && latest && earliest.getTime() === latest.getTime()) {
+//             finalTimeIn = earliest;
+//             finalTimeOut = null;
+//           } else {
+//             finalTimeIn = earliest;
+//             finalTimeOut = latest;
+//           }
+
+//           // ✅ SUBTRACT 8 HOURS BEFORE SAVING
+//           const update = await roomModel.updateTimeData(
+//             {
+//               timeIn: toUTC(finalTimeIn),
+//               timeOut: toUTC(finalTimeOut),
+//               updatedBy: "8958",
+//             },
+//             {
+//               period: periodKey,
+//               code: item.code,
+//             },
+//             txn,
+//             "updatedDate",
+//           );
+
+//           console.log("✨ Update result:", update);
+//         } else {
+//           if (!newTimeIn && !newTimeOut) {
+//             console.log(
+//               `⏭️ Skipping insert - both times are null for code ${item.code}`,
+//             );
+//             return;
+//           }
+
+//           const allTimes = [newTimeIn, newTimeOut];
+//           const earliest = getEarliest(...allTimes);
+//           const latest = getLatest(...allTimes);
+
+//           // ✅ Check if earliest and latest are equal
+//           if (earliest && latest && earliest.getTime() === latest.getTime()) {
+//             finalTimeIn = earliest;
+//             finalTimeOut = null;
+//           } else {
+//             finalTimeIn = earliest;
+//             finalTimeOut = latest;
+//           }
+
+//           const insert = await roomModel.insertTimeData(
+//             {
+//               period: periodKey,
+//               code: item.code,
+//               timeIn: toUTC(finalTimeIn),
+//               timeOut: toUTC(finalTimeOut),
+//               updatedBy: "8958",
+//             },
+//             txn,
+//             "updatedDate",
+//           );
+
+//           console.log("✨ Insert result:", insert);
+//         }
+//       });
+//     } catch (error) {
+//       console.error("❌ Transaction error:", error);
+//     }
+//   }
+// };
+
 module.exports = {
   addRoom,
   addRoomType,
@@ -163,4 +308,5 @@ module.exports = {
   getRoomTypes,
   getBuildings,
   getDepartments,
+  // runTimeData,
 };

@@ -54,7 +54,7 @@ module.exports = configure(function (/* ctx */) {
       publicPath: "/room-xpert/",
       // analyze: true,
       env: {
-        Platform: "PROD",
+        Platform: "DEV",
         APP_NAME: "Room Management",
         RestApiLocal: "http://10.107.0.11:3344",
         RestApiProd: "https://localapi.uerm.edu.ph:8081",

@@ -126,6 +126,43 @@ const getRooms = async () => {
   );
 };
 
+const checkTimeData = async (period, code) => {
+  return await sqlHelper.query(
+    `SELECT 
+      *
+    FROM
+      HR..TimeData
+    WHERE
+      Period = ?
+      AND Code = ?
+    `,
+    [period, code],
+  );
+};
+
+// const updateTimeData = async (item, condition, txn, updateDate) => {
+//   console.log(item, condition, updateDate);
+
+//   return await sqlHelper.update(
+//     "HR..TimeData",
+//     item,
+//     condition,
+//     txn,
+//     updateDate,
+//   );
+// };
+
+// const insertTimeData = async (item, txn, creationDateTimeField) => {
+//   console.log(item, creationDateTimeField);
+
+//   return await sqlHelper.insert(
+//     "HR..TimeData",
+//     item,
+//     txn,
+//     creationDateTimeField,
+//   );
+// };
+
 module.exports = {
   roomValidation,
   roomTypesvalidation,
@@ -137,4 +174,7 @@ module.exports = {
   addRoom,
   getDepartments,
   getRooms,
+  checkTimeData,
+  // updateTimeData,
+  // insertTimeData,
 };

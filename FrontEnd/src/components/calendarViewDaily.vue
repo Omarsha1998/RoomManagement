@@ -556,8 +556,6 @@ export default {
         return allowedDays.length > 0 ? allowedDays : null;
       };
 
-      console.log(this.events);
-
       for (const event of this.events) {
         let start = parseTimestamp(event.fromDate);
         const end = parseTimestamp(event.toDate);
@@ -649,7 +647,7 @@ export default {
         .filter((row) => {
           if (row.intervals) {
             row.formattedIntervals = helperMethods.formatIntervals(
-              row.intervals
+              row.intervals,
             );
           }
 
@@ -710,15 +708,15 @@ export default {
         const needle = val.toLowerCase();
 
         this.departments = departmentOptions.filter(
-          (option) => option.deptLabel?.toLowerCase().indexOf(needle) > -1
+          (option) => option.deptLabel?.toLowerCase().indexOf(needle) > -1,
         );
 
         this.rooms = roomOptions.filter(
-          (option) => option.name?.toLowerCase().indexOf(needle) > -1
+          (option) => option.name?.toLowerCase().indexOf(needle) > -1,
         );
 
         this.buildings = buildingOptions.filter(
-          (option) => option.description?.toLowerCase().indexOf(needle) > -1
+          (option) => option.description?.toLowerCase().indexOf(needle) > -1,
         );
       });
     },
